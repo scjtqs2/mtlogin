@@ -5,6 +5,7 @@ go 1.22.2
 require (
 	github.com/Danny-Dasilva/CycleTLS/cycletls v1.0.26
 	github.com/google/go-cmp v0.6.0
+	github.com/google/martian v2.1.0+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/syndtr/goleveldb v1.0.0
