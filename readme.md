@@ -24,6 +24,7 @@ docker run -d \
   --name=mtlogin \
   -e USERNAME=aaaaaa \
   -e PASSWORD=bbbbbbbb \
+  -e OPTSECRET=cccccccc \
   -e CRONTAB="2 */2 * * *" \
   --restart unless-stopped \
   ghcr.io/scjtqs2/mtlogin:edge
