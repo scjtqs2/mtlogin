@@ -17,9 +17,6 @@ COPY docker-entrypoint.sh /docker-entrypoint.sh
 
 RUN chmod +x /docker-entrypoint.sh && \
     apk add --no-cache --update \
-      ffmpeg \
-      coreutils \
-      shadow \
       su-exec \
       tzdata && \
     rm -rf /var/cache/apk/* && \
