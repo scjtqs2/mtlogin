@@ -1,6 +1,6 @@
 module github.com/scjtqs2/mtlogin
 
-go 1.22.2
+go 1.22
 
 require (
 	github.com/Danny-Dasilva/CycleTLS/cycletls v1.0.26

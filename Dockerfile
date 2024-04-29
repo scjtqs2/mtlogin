@@ -1,4 +1,4 @@
-FROM golang:1.20-alpine AS builder
+FROM golang:1.22-alpine AS builder
 RUN go env -w GO111MODULE=auto \
   && go env -w CGO_ENABLED=0 \
   && go env -w GOPROXY=https://goproxy.cn,direct
