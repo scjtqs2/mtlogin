@@ -22,6 +22,7 @@ If you prefer the `docker cli` execute the following command.
 ```bash
 docker run -d \
   --name=mtlogin \
+  -v /yourpath/auth.db:/data \
   -e USERNAME=aaaaaa \
   -e PASSWORD=bbbbbbbb \
   -e OPTSECRET=cccccccc \
