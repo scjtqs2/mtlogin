@@ -28,8 +28,8 @@ func NewJobserver(cfg *Config) (*Jobserver, error) {
 	s.Cron = cron.New(cron.WithParser(cron.NewParser(
 		cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor,
 	)))
-	// _, err := s.Cron.AddFunc(s.cfg.Crontab, s.checkToken)
-	_, err := s.Cron.AddFunc("* * * * *", s.checkToken)
+	_, err := s.Cron.AddFunc(s.cfg.Crontab, s.checkToken)
+	// _, err := s.Cron.AddFunc("* * * * *", s.checkToken)
 	if err != nil {
 		return nil, err
 	}
