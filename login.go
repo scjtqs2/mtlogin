@@ -132,7 +132,7 @@ func (c *Client) check() error {
 			fmt.Printf("更新最后访问时间成功\r\n")
 			return nil
 		}
-		_ = c.db.Delete([]byte(dbKey), nil)
+		// _ = c.db.Delete([]byte(dbKey), nil)
 		return errors.New("连接成功，但更新状态失败")
 	}
 	_ = c.db.Delete([]byte(dbKey), nil)
