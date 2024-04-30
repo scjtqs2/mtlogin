@@ -8,11 +8,11 @@ import (
 )
 
 type Config struct {
-	UserName    string `yaml:"username"`   // m-team账号
-	Password    string `yaml:"password"`   // m-team密码
-	OptSecret   string `yaml:"opt_secret"` // google 二次验证的秘钥
-	Proxy       string `yaml:"proxy"`      // 代理服务 eg: http://192.168.50.21:7890
-	Crontab     string `yaml:"crontab"`    // 定时规则
+	UserName    string `yaml:"username"`    // m-team账号
+	Password    string `yaml:"password"`    // m-team密码
+	TotpSecret  string `yaml:"totp_secret"` // google 二次验证的秘钥
+	Proxy       string `yaml:"proxy"`       // 代理服务 eg: http://192.168.50.21:7890
+	Crontab     string `yaml:"crontab"`     // 定时规则
 	Qqpush      string `yaml:"qqpush"`
 	QqpushToken string `yaml:"qqpush_token"`
 }
@@ -44,7 +44,7 @@ func (j *Jobserver) Loop() error {
 
 func (j *Jobserver) checkToken() {
 	fmt.Printf("checkToken \r\n")
-	err := j.client.login(j.cfg.UserName, j.cfg.Password, j.cfg.OptSecret)
+	err := j.client.login(j.cfg.UserName, j.cfg.Password, j.cfg.TotpSecret)
 	if err != nil {
 		log.Errorf("m-team login failed err=%v", err)
 		if j.cfg.Qqpush != "" {

@@ -22,8 +22,8 @@ func main() {
 	if os.Getenv("PASSWORD") != "" {
 		cfg.Password = os.Getenv("PASSWORD")
 	}
-	if os.Getenv("OPTSECRET") != "" {
-		cfg.OptSecret = os.Getenv("OPTSECRET")
+	if os.Getenv("TOTPSECRET") != "" {
+		cfg.TotpSecret = os.Getenv("TOTPSECRET")
 	}
 	if os.Getenv("PROXY") != "" {
 		cfg.Proxy = os.Getenv("PROXY")

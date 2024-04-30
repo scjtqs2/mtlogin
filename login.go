@@ -32,7 +32,7 @@ func NewClient(dbPath, proxy string) (*Client, error) {
 	return c, nil
 }
 
-func (c *Client) login(username, password, optSecret string) error {
+func (c *Client) login(username, password, totpSecret string) error {
 	if c.ua == "" {
 		c.ua = ua
 	}
@@ -46,7 +46,7 @@ func (c *Client) login(username, password, optSecret string) error {
 	if needLogin {
 		u := "https://kp.m-team.cc/api/login"
 		// 二次验证
-		tk, err := dgoogauth.GetTOTPToken(optSecret)
+		tk, err := dgoogauth.GetTOTPToken(totpSecret)
 		if err != nil {
 			return err
 		}

@@ -9,7 +9,7 @@
 |--------------|------------------------------------------|
 | USERNAME     | 用户名                                      |
 | PASSWORD     | 账号密码                                     |
-| OPTSECRET    | google 二次认证的secret                       |
+| TOTPSECRET    | google 二次认证的secret                       |
 | PROXY        | 代理服务器地址。例如: `http://192.168.50.123:7890` |
 | CRONTAB      | 定时任务配置，例如: `2 */2 * * *`                 |
 | QQPUSH       | 结果推送给的qq号                                |
@@ -25,7 +25,7 @@ docker run -d \
   -v /yourpath/auth.db:/data \
   -e USERNAME=aaaaaa \
   -e PASSWORD=bbbbbbbb \
-  -e OPTSECRET=cccccccc \
+  -e TOTPSECRET=cccccccc \
   -e CRONTAB="2 */2 * * *" \
   --restart unless-stopped \
   ghcr.io/scjtqs2/mtlogin:edge
