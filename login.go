@@ -14,11 +14,12 @@ import (
 )
 
 type Client struct {
-	db    *leveldb.DB
-	ua    string
-	token string
-	lock  sync.Mutex
-	proxy *url.URL
+	db        *leveldb.DB
+	ua        string
+	token     string
+	lock      sync.Mutex
+	proxy     *url.URL
+	MTeamAuth string
 }
 
 func NewClient(dbPath, proxy string) (*Client, error) {
@@ -91,6 +92,10 @@ func (c *Client) login(username, password, totpSecret string) error {
 func (c *Client) check() error {
 	if c.ua == "" {
 		c.ua = ua
+	}
+	// 使用外部给的token
+	if c.MTeamAuth != "" {
+		c.token = c.MTeamAuth
 	}
 	u := "https://kp.m-team.cc/api/member/profile"
 	client, _ := cloudscraper.Init(false, false)

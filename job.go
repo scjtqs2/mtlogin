@@ -15,6 +15,8 @@ type Config struct {
 	Crontab     string `yaml:"crontab"`     // 定时规则
 	Qqpush      string `yaml:"qqpush"`
 	QqpushToken string `yaml:"qqpush_token"`
+	MTeamAuth   string `yaml:"m_team_auth"` // 直接提供登录的认证
+	Ua          string `yaml:"ua"`          // auth对应的user-agent
 }
 
 type Jobserver struct {
@@ -34,6 +36,8 @@ func NewJobserver(cfg *Config) (*Jobserver, error) {
 		return nil, err
 	}
 	s.client, err = NewClient(dbPath, s.cfg.Proxy)
+	s.client.ua = cfg.Ua
+	s.client.MTeamAuth = cfg.MTeamAuth
 	return s, nil
 }
 
@@ -44,15 +48,19 @@ func (j *Jobserver) Loop() error {
 
 func (j *Jobserver) checkToken() {
 	fmt.Printf("checkToken \r\n")
-	err := j.client.login(j.cfg.UserName, j.cfg.Password, j.cfg.TotpSecret)
-	if err != nil {
-		log.Errorf("m-team login failed err=%v", err)
-		if j.cfg.Qqpush != "" {
-			qqpush.Qqpush(fmt.Sprintf("m-team login failed err=%v", err), j.cfg.Qqpush, j.cfg.QqpushToken)
+	// 非直接给auth字段，需要手动登录
+	if j.cfg.MTeamAuth == "" {
+		err := j.client.login(j.cfg.UserName, j.cfg.Password, j.cfg.TotpSecret)
+		if err != nil {
+			log.Errorf("m-team login failed err=%v", err)
+			if j.cfg.Qqpush != "" {
+				qqpush.Qqpush(fmt.Sprintf("m-team login failed err=%v", err), j.cfg.Qqpush, j.cfg.QqpushToken)
+			}
+			return
 		}
-		return
 	}
-	err = j.client.check()
+
+	err := j.client.check()
 	if err != nil {
 		log.Errorf("m-team check token failed err=%v", err)
 		if j.cfg.Qqpush != "" {

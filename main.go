@@ -37,6 +37,14 @@ func main() {
 	if os.Getenv("QQPUSH_TOKEN") != "" {
 		cfg.QqpushToken = os.Getenv("QQPUSH_TOKEN")
 	}
+	if os.Getenv("M_TEAM_AUTH") != "" {
+		cfg.MTeamAuth = os.Getenv("M_TEAM_AUTH")
+	}
+	if os.Getenv("UA") != "" {
+		cfg.Ua = os.Getenv("UA")
+	} else {
+		cfg.Ua = ua
+	}
 	job, err := NewJobserver(cfg)
 	if err != nil {
 		panic(err)
