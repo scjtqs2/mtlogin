@@ -2,10 +2,14 @@ package main
 
 import "os"
 
+var (
+	dbPath  = "/data/cookie.db"
+	apiHost = "api.m-team.io"
+)
+
 const (
-	dbPath = "/data/cookie.db"
-	dbKey  = "m-team-auth"
-	ua     = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0"
+	dbKey = "m-team-auth"
+	ua    = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0"
 )
 
 func defaultCfg() *Config {
@@ -44,6 +48,12 @@ func main() {
 		cfg.Ua = os.Getenv("UA")
 	} else {
 		cfg.Ua = ua
+	}
+	if os.Getenv("DB_PATH") != "" {
+		dbPath = os.Getenv("DB_PATH")
+	}
+	if os.Getenv("API_HOST") != "" {
+		apiHost = os.Getenv("API_HOST")
 	}
 	job, err := NewJobserver(cfg)
 	if err != nil {

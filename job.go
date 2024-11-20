@@ -36,6 +36,9 @@ func NewJobserver(cfg *Config) (*Jobserver, error) {
 		return nil, err
 	}
 	s.client, err = NewClient(dbPath, s.cfg.Proxy)
+	if err != nil {
+		panic(err)
+	}
 	s.client.ua = cfg.Ua
 	s.client.MTeamAuth = cfg.MTeamAuth
 	return s, nil

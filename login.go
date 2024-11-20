@@ -45,7 +45,7 @@ func (c *Client) login(username, password, totpSecret string) error {
 		needLogin = true
 	}
 	if needLogin {
-		u := "https://kp.m-team.cc/api/login"
+		u := fmt.Sprintf("https://%s/api/login", apiHost)
 		// 二次验证
 		tk, err := dgoogauth.GetTOTPToken(totpSecret)
 		if err != nil {
@@ -97,7 +97,7 @@ func (c *Client) check() error {
 	if c.MTeamAuth != "" {
 		c.token = c.MTeamAuth
 	}
-	u := "https://kp.m-team.cc/api/member/profile"
+	u := fmt.Sprintf("https://%s/api/member/profile", apiHost)
 	client, _ := cloudscraper.Init(false, false)
 	options := cycletls.Options{
 		Headers:         make(map[string]string),
@@ -128,7 +128,7 @@ func (c *Client) check() error {
 	if user_info.Get("message").String() == "SUCCESS" {
 		fmt.Printf("用户信息获取成功\r\n")
 		// 更新最后访问时间
-		uu := "https://kp.m-team.cc/api/member/updateLastBrowse"
+		uu := fmt.Sprintf("https://%s/api/member/updateLastBrowse", apiHost)
 		res, err = client.Do(uu, options, http.MethodPost)
 		fmt.Printf("body %s \r\n", res.Body)
 		fmt.Printf("headers %+v \r\n", res.Headers)

@@ -16,6 +16,7 @@
 | QQPUSH_TOKEN | 对应QQ号推送的token                            |
 | M_TEAM_AUTH  | 直接填写m-team的auth字段，自行用浏览器登录，然后抓取到认证信息     |
 | UA           | M_TEAM_AUTH 对应的user-agent                |
+| API_HOST           | api的域名。默认值为`api.m-team.io`               |
 
 ## docker
 
