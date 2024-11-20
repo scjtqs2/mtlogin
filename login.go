@@ -134,12 +134,16 @@ func (c *Client) check() error {
 		fmt.Printf("headers %+v \r\n", res.Headers)
 		fmt.Printf("Cookies %s \r\n", res.Cookies)
 		if res.JSONBody()["message"] == "SUCCESS" {
+			failedCount = 0
 			fmt.Printf("更新最后访问时间成功\r\n")
 			return nil
 		}
 		// _ = c.db.Delete([]byte(dbKey), nil)
 		return errors.New("连接成功，但更新状态失败")
 	}
-	_ = c.db.Delete([]byte(dbKey), nil)
+	// 连续失败5次
+	if failedCount >= 5 {
+		_ = c.db.Delete([]byte(dbKey), nil)
+	}
 	return errors.New("cookie已过期")
 }

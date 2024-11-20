@@ -7,6 +7,8 @@ import (
 	"github.com/scjtqs2/mtlogin/lib/qqpush"
 )
 
+var failedCount int = 0 // 失败次数
+
 type Config struct {
 	UserName    string `yaml:"username"`    // m-team账号
 	Password    string `yaml:"password"`    // m-team密码
@@ -65,6 +67,7 @@ func (j *Jobserver) checkToken() {
 
 	err := j.client.check()
 	if err != nil {
+		failedCount++
 		log.Errorf("m-team check token failed err=%v", err)
 		if j.cfg.Qqpush != "" {
 			qqpush.Qqpush(fmt.Sprintf("m-team login failed err=%v", err), j.cfg.Qqpush, j.cfg.QqpushToken)
