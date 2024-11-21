@@ -1,10 +1,14 @@
 package main
 
-import "os"
+import (
+	"os"
+	"strconv"
+)
 
 var (
 	dbPath  = "/data/cookie.db"
 	apiHost = "api.m-team.io"
+	timeOut = 60
 )
 
 const (
@@ -54,6 +58,9 @@ func main() {
 	}
 	if os.Getenv("API_HOST") != "" {
 		apiHost = os.Getenv("API_HOST")
+	}
+	if os.Getenv("TIME_OUT") != "" {
+		timeOut, _ = strconv.Atoi(os.Getenv("TIME_OUT"))
 	}
 	job, err := NewJobserver(cfg)
 	if err != nil {

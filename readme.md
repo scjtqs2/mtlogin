@@ -21,6 +21,7 @@
 | M_TEAM_AUTH  | 直接填写m-team的auth字段，自行用浏览器登录，然后抓取到认证信息     |
 | UA           | M_TEAM_AUTH 对应的user-agent                |
 | API_HOST           | api的域名。默认值为`api.m-team.io`               |
+| TIME_OUT           | api访问的超时时间，单位秒。默认值为60                    |
 
 ## docker
 

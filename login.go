@@ -64,7 +64,7 @@ func (c *Client) login(username, password, totpSecret string) error {
 		options := cycletls.Options{
 			Headers:         make(map[string]string),
 			Body:            body.Encode(),
-			Timeout:         10,
+			Timeout:         timeOut,
 			DisableRedirect: true,
 			UserAgent:       c.ua,
 		}
@@ -76,10 +76,13 @@ func (c *Client) login(username, password, totpSecret string) error {
 		// options.Headers["Content-Type"] = writer.FormDataContentType()
 		options.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
 		options.Headers["Accept"] = "application/json;charset=UTF-8"
+		fmt.Println("==================login start======================== ")
+		defer fmt.Println("==================login end========================")
 		res, err := client.Do(u, options, http.MethodPost)
 		if err != nil {
 			return err
 		}
+
 		fmt.Printf("body %s \r\n", res.Body)
 		fmt.Printf("headers %+v \r\n", res.Headers)
 		fmt.Printf("Cookies %s \r\n", res.Cookies)
@@ -102,7 +105,7 @@ func (c *Client) check() error {
 	options := cycletls.Options{
 		Headers:         make(map[string]string),
 		Body:            "",
-		Timeout:         10,
+		Timeout:         timeOut,
 		DisableRedirect: true,
 		UserAgent:       c.ua,
 	}
@@ -115,21 +118,27 @@ func (c *Client) check() error {
 	options.Headers["Accept"] = "application/json;charset=UTF-8"
 	options.Headers["Authorization"] = fmt.Sprintf("%s", c.token)
 	res, err := client.Do(u, options, http.MethodPost)
+	fmt.Println("==================check start======================== ")
 	if err != nil {
+		fmt.Println("==================check start======================== ")
 		return err
 	}
 	if res.Status != http.StatusOK {
+		fmt.Println("==================check start======================== ")
 		return errors.New(fmt.Sprintf("cookie已过期 status=%d;body=%s", res.Status, res.Body))
 	}
 	fmt.Printf("body %s \r\n", res.Body)
 	fmt.Printf("headers %+v \r\n", res.Headers)
 	fmt.Printf("Cookies %s \r\n", res.Cookies)
+	fmt.Println("==================check start======================== ")
 	user_info := gjson.Parse(res.Body)
 	if user_info.Get("message").String() == "SUCCESS" {
 		fmt.Printf("用户信息获取成功\r\n")
 		// 更新最后访问时间
 		uu := fmt.Sprintf("https://%s/api/member/updateLastBrowse", apiHost)
 		res, err = client.Do(uu, options, http.MethodPost)
+		fmt.Println("==================update start======================== ")
+		defer fmt.Println("==================update start======================== ")
 		fmt.Printf("body %s \r\n", res.Body)
 		fmt.Printf("headers %+v \r\n", res.Headers)
 		fmt.Printf("Cookies %s \r\n", res.Cookies)
