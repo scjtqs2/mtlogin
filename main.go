@@ -19,6 +19,7 @@ const (
 func defaultCfg() *Config {
 	return &Config{
 		Crontab: "2 */2 * * *",
+		Referer: "https://kp.m-team.cc/index",
 	}
 }
 
@@ -58,6 +59,9 @@ func main() {
 	}
 	if os.Getenv("API_HOST") != "" {
 		apiHost = os.Getenv("API_HOST")
+	}
+	if os.Getenv("API_REFERER") != "" {
+		cfg.Referer = os.Getenv("API_REFERER")
 	}
 	if os.Getenv("TIME_OUT") != "" {
 		timeOut, _ = strconv.Atoi(os.Getenv("TIME_OUT"))

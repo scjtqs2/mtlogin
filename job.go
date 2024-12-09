@@ -19,6 +19,7 @@ type Config struct {
 	QqpushToken string `yaml:"qqpush_token"`
 	MTeamAuth   string `yaml:"m_team_auth"` // 直接提供登录的认证
 	Ua          string `yaml:"ua"`          // auth对应的user-agent
+	Referer     string `yaml:"referer"`     // referer地址
 }
 
 type Jobserver struct {
@@ -27,6 +28,7 @@ type Jobserver struct {
 	client *Client
 }
 
+// NewJobserver 初始化定时任务
 func NewJobserver(cfg *Config) (*Jobserver, error) {
 	s := &Jobserver{cfg: cfg}
 	s.Cron = cron.New(cron.WithParser(cron.NewParser(
@@ -37,7 +39,7 @@ func NewJobserver(cfg *Config) (*Jobserver, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.client, err = NewClient(dbPath, s.cfg.Proxy)
+	s.client, err = NewClient(dbPath, s.cfg.Proxy, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -51,6 +53,7 @@ func (j *Jobserver) Loop() error {
 	return nil
 }
 
+// checkToken 执行馒头的登录和计时刷新
 func (j *Jobserver) checkToken() {
 	fmt.Printf("checkToken \r\n")
 	// 非直接给auth字段，需要手动登录

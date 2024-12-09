@@ -3,25 +3,28 @@
 > 根据自行配置的刷新频率进行账号刷新
 >
 > 连续失败5次才清理cookie重新获取。如果要强制重新拉取cookie可以删掉 data里面的`cookie.db`再重新运行。
-> 
+>
 
-## 使用之前，需要把`二次认证`从`邮箱验证`更换成`动态验证码二次验证`。`TOTPSECRET`是从二维码解析出来的字符串提取的`secret`字段。
+## 使用之前，需要把`二次认证`从`邮箱验证`更换成`动态验证码二次验证`。`TOTPSECRET`是从二维码解析出来的字符串提取的
+
+`secret`字段。
 
 ### env环境变量参数
 
-| Parameter    | Notes                                    |
-|--------------|------------------------------------------|
-| USERNAME     | 用户名                                      |
-| PASSWORD     | 账号密码                                     |
-| TOTPSECRET   | google 二次认证的secret                       |
-| PROXY        | 代理服务器地址。例如: `http://192.168.50.123:7890` |
-| CRONTAB      | 定时任务配置，例如: `2 */2 * * *`                 |
-| QQPUSH       | 结果推送给的qq号                                |
-| QQPUSH_TOKEN | 对应QQ号推送的token                            |
-| M_TEAM_AUTH  | 直接填写m-team的auth字段，自行用浏览器登录，然后抓取到认证信息     |
-| UA           | M_TEAM_AUTH 对应的user-agent                |
-| API_HOST           | api的域名。默认值为`api.m-team.io`               |
-| TIME_OUT           | api访问的超时时间，单位秒。默认值为60                    |
+| Parameter    | Notes                                                            |
+|--------------|------------------------------------------------------------------|
+| USERNAME     | 用户名                                                              |
+| PASSWORD     | 账号密码                                                             |
+| TOTPSECRET   | google 二次认证的secret                                               |
+| PROXY        | 代理服务器地址。例如: `http://192.168.50.123:7890`                         |
+| CRONTAB      | 定时任务配置，例如: `2 */2 * * *`                                         |
+| QQPUSH       | 结果推送给的qq号                                                        |
+| QQPUSH_TOKEN | 对应QQ号推送的token                                                    |
+| M_TEAM_AUTH  | 直接填写m-team的auth字段，自行用浏览器登录，然后抓取到认证信息                             |
+| UA           | M_TEAM_AUTH 对应的user-agent                                        |
+| API_HOST     | api的域名，如果和你的不一样，就换成你自己的。默认值为`api.m-team.io`                      |
+| TIME_OUT     | api访问的超时时间，单位秒。默认值为60                                            |
+| API_REFERER  | api的请求的referer值,如果和你的不一样，就换成你自己的。默认为`https://kp.m-team.cc/index` |
 
 ## docker
 

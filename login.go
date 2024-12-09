@@ -13,6 +13,7 @@ import (
 	"sync"
 )
 
+// Client http的请求处理合类
 type Client struct {
 	db        *leveldb.DB
 	ua        string
@@ -20,11 +21,12 @@ type Client struct {
 	lock      sync.Mutex
 	proxy     *url.URL
 	MTeamAuth string
+	cfg       *Config
 }
 
-func NewClient(dbPath, proxy string) (*Client, error) {
+func NewClient(dbPath, proxy string, cfg *Config) (*Client, error) {
 	var err error
-	c := &Client{}
+	c := &Client{cfg: cfg}
 	c.db, err = leveldb.OpenFile(dbPath, nil)
 	if err != nil {
 		return nil, err
@@ -33,6 +35,7 @@ func NewClient(dbPath, proxy string) (*Client, error) {
 	return c, nil
 }
 
+// login 通过账号密码+otp秘钥登录来获取auth
 func (c *Client) login(username, password, totpSecret string) error {
 	if c.ua == "" {
 		c.ua = ua
@@ -72,7 +75,7 @@ func (c *Client) login(username, password, totpSecret string) error {
 			options.Proxy = c.proxy.String()
 		}
 		options.Headers["User-Agent"] = c.ua
-		options.Headers["referer"] = "https://kp.m-team.cc/index"
+		options.Headers["referer"] = c.cfg.Referer
 		// options.Headers["Content-Type"] = writer.FormDataContentType()
 		options.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
 		options.Headers["Accept"] = "application/json;charset=UTF-8"
@@ -92,6 +95,7 @@ func (c *Client) login(username, password, totpSecret string) error {
 	return nil
 }
 
+// check 校验auth是否有效，有效的话再进行签到更新
 func (c *Client) check() error {
 	if c.ua == "" {
 		c.ua = ua
@@ -113,24 +117,24 @@ func (c *Client) check() error {
 		options.Proxy = c.proxy.String()
 	}
 	options.Headers["User-Agent"] = c.ua
-	options.Headers["referer"] = "https://kp.m-team.cc/index"
+	options.Headers["referer"] = c.cfg.Referer
 	options.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
 	options.Headers["Accept"] = "application/json;charset=UTF-8"
 	options.Headers["Authorization"] = fmt.Sprintf("%s", c.token)
 	res, err := client.Do(u, options, http.MethodPost)
 	fmt.Println("==================check start======================== ")
 	if err != nil {
-		fmt.Println("==================check start======================== ")
+		fmt.Println("==================check end======================== ")
 		return err
 	}
 	if res.Status != http.StatusOK {
-		fmt.Println("==================check start======================== ")
+		fmt.Println("==================check end======================== ")
 		return errors.New(fmt.Sprintf("cookie已过期 status=%d;body=%s", res.Status, res.Body))
 	}
 	fmt.Printf("body %s \r\n", res.Body)
 	fmt.Printf("headers %+v \r\n", res.Headers)
 	fmt.Printf("Cookies %s \r\n", res.Cookies)
-	fmt.Println("==================check start======================== ")
+	fmt.Println("==================check end======================== ")
 	user_info := gjson.Parse(res.Body)
 	if user_info.Get("message").String() == "SUCCESS" {
 		fmt.Printf("用户信息获取成功\r\n")
@@ -138,7 +142,7 @@ func (c *Client) check() error {
 		uu := fmt.Sprintf("https://%s/api/member/updateLastBrowse", apiHost)
 		res, err = client.Do(uu, options, http.MethodPost)
 		fmt.Println("==================update start======================== ")
-		defer fmt.Println("==================update start======================== ")
+		defer fmt.Println("==================update end======================== ")
 		fmt.Printf("body %s \r\n", res.Body)
 		fmt.Printf("headers %+v \r\n", res.Headers)
 		fmt.Printf("Cookies %s \r\n", res.Cookies)
