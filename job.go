@@ -14,19 +14,19 @@ import (
 var failedCount int = 0 // 失败次数
 
 type Config struct {
-	UserName    string `yaml:"username"`    // m-team账号
-	Password    string `yaml:"password"`    // m-team密码
-	TotpSecret  string `yaml:"totp_secret"` // google 二次验证的秘钥
-	Proxy       string `yaml:"proxy"`       // 代理服务 eg: http://192.168.50.21:7890
-	Crontab     string `yaml:"crontab"`     // 定时规则
-	Qqpush      string `yaml:"qqpush"`
-	QqpushToken string `yaml:"qqpush_token"`
-	MTeamAuth   string `yaml:"m_team_auth"`  // 直接提供登录的认证
-	Ua          string `yaml:"ua"`           // auth对应的user-agent
-	Referer     string `yaml:"referer"`      // referer地址
-	CorpID      string `yaml:"corp_id"`      // 企业 ID
-	AgentSecret string `yaml:"agent_secret"` // 应用密钥
-	AgentID     int    `yaml:"agent_id"`     // 应用 ID
+	UserName      string `yaml:"username"`    // m-team账号
+	Password      string `yaml:"password"`    // m-team密码
+	TotpSecret    string `yaml:"totp_secret"` // google 二次验证的秘钥
+	Proxy         string `yaml:"proxy"`       // 代理服务 eg: http://192.168.50.21:7890
+	Crontab       string `yaml:"crontab"`     // 定时规则
+	Qqpush        string `yaml:"qqpush"`
+	QqpushToken   string `yaml:"qqpush_token"`
+	MTeamAuth     string `yaml:"m_team_auth"`   // 直接提供登录的认证
+	Ua            string `yaml:"ua"`            // auth对应的user-agent
+	Referer       string `yaml:"referer"`       // referer地址
+	WxCorpID      string `yaml:"WxCorpID"`      // 企业 ID
+	WxAgentSecret string `yaml:"WxAgentSecret"` // 应用密钥
+	WxAgentID     int    `yaml:"WxAgentID"`     // 应用 ID
 }
 
 type Jobserver struct {
@@ -70,7 +70,7 @@ func (j *Jobserver) checkToken() {
 			if j.cfg.Qqpush != "" {
 				qqpush.Qqpush(fmt.Sprintf("m-team login failed err=%v", err), j.cfg.Qqpush, j.cfg.QqpushToken)
 			}
-			if j.cfg.CorpID != "" {
+			if j.cfg.WxCorpID != "" {
 				j.sendWeixinMessage(fmt.Sprintf("m-team login failed err=%v", err))
 			}
 
@@ -87,7 +87,7 @@ func (j *Jobserver) checkToken() {
 		if j.cfg.Qqpush != "" {
 			qqpush.Qqpush(fmt.Sprintf("m-team login failed err=%v", err), j.cfg.Qqpush, j.cfg.QqpushToken)
 		}
-		if j.cfg.CorpID != "" {
+		if j.cfg.WxCorpID != "" {
 			j.sendWeixinMessage(fmt.Sprintf("m-team login failed err=%v", err))
 		}
 
@@ -98,7 +98,7 @@ func (j *Jobserver) checkToken() {
 	if j.cfg.Qqpush != "" {
 		qqpush.Qqpush(fmt.Sprintf("m-team 账号%s刷新成功", j.cfg.UserName), j.cfg.Qqpush, j.cfg.QqpushToken)
 	}
-	if j.cfg.CorpID != "" {
+	if j.cfg.WxCorpID != "" {
 		j.sendWeixinMessage(fmt.Sprintf("m-team 账号%s刷新成功", j.cfg.UserName))
 	}
 
@@ -106,9 +106,9 @@ func (j *Jobserver) checkToken() {
 
 // sendWeixinMessage method to push message via WeChat
 func (j *Jobserver) sendWeixinMessage(message string) {
-	if j.cfg.CorpID != "" && j.cfg.AgentSecret != "" {
+	if j.cfg.WxCorpID != "" && j.cfg.WxAgentSecret != "" {
 
-		err := weixin.SendMessage(j.cfg.CorpID, j.cfg.AgentSecret, message, j.cfg.AgentID)
+		err := weixin.SendMessage(j.cfg.WxCorpID, j.cfg.WxAgentSecret, message, j.cfg.WxAgentID)
 		if err != nil {
 			log.Errorf("企业微信推送失败: %v", err)
 		}
@@ -118,7 +118,7 @@ func (j *Jobserver) sendWeixinMessage(message string) {
 }
 
 func (j *Jobserver) GetAllDepartments() ([]string, error) {
-	token, err := weixin.GetAccessToken(j.cfg.CorpID, j.cfg.AgentSecret)
+	token, err := weixin.GetAccessToken(j.cfg.WxCorpID, j.cfg.WxAgentSecret)
 	if err != nil {
 		return nil, err
 	}
