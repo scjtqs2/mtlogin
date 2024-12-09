@@ -72,15 +72,15 @@ func main() {
 	if os.Getenv("TIME_OUT") != "" {
 		timeOut, _ = strconv.Atoi(os.Getenv("TIME_OUT"))
 	}
-	if os.Getenv("WxCorpID") != "" {
-		cfg.WxCorpID = os.Getenv("WxCorpID")
+	if os.Getenv("WXCORPID") != "" {
+		cfg.WxCorpID = os.Getenv("WXCORPID")
 	}
-	if os.Getenv("WxAgentSecret") != "" {
-		cfg.WxAgentSecret = os.Getenv("WxAgentSecret")
+	if os.Getenv("WXAGENTSECRET") != "" {
+		cfg.WxAgentSecret = os.Getenv("WXAGENTSECRET")
 	}
-	if os.Getenv("WxAgentID") != "" {
+	if os.Getenv("WXAGENTID") != "" {
 		// 从环境变量读取 AgentID 字符串，并转换为 int
-		WxAgentID, err := strconv.Atoi(os.Getenv("WxAgentID"))
+		WxAgentID, err := strconv.Atoi(os.Getenv("WXAGENTID"))
 		if err != nil {
 			log.Fatalf("无法转换 AgentID 环境变量为整数: %v", err)
 		}
