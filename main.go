@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 	"strconv"
 )
@@ -18,8 +19,13 @@ const (
 
 func defaultCfg() *Config {
 	return &Config{
-		Crontab: "2 */2 * * *",
-		Referer: "https://kp.m-team.cc/index",
+		Crontab:       "2 */2 * * *",
+		Referer:       "https://kp.m-team.cc/index",
+		MTeamAuth:     "",
+		Ua:            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+		WxCorpID:      "",
+		WxAgentSecret: "",
+		WxAgentID:     0,
 	}
 }
 
@@ -66,9 +72,24 @@ func main() {
 	if os.Getenv("TIME_OUT") != "" {
 		timeOut, _ = strconv.Atoi(os.Getenv("TIME_OUT"))
 	}
+	if os.Getenv("WxCorpID") != "" {
+		cfg.WxCorpID = os.Getenv("WxCorpID")
+	}
+	if os.Getenv("WxAgentSecret") != "" {
+		cfg.WxAgentSecret = os.Getenv("WxAgentSecret")
+	}
+	if os.Getenv("WxAgentID") != "" {
+		// 从环境变量读取 AgentID 字符串，并转换为 int
+		WxAgentID, err := strconv.Atoi(os.Getenv("WxAgentID"))
+		if err != nil {
+			log.Fatalf("无法转换 AgentID 环境变量为整数: %v", err)
+		}
+		cfg.WxAgentID = WxAgentID
+	}
 	job, err := NewJobserver(cfg)
 	if err != nil {
 		panic(err)
 	}
 	job.Loop()
+
 }
