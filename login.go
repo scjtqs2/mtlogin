@@ -3,25 +3,31 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
+	"strconv"
+	"sync"
+
 	"github.com/Danny-Dasilva/CycleTLS/cycletls"
 	"github.com/scjtqs2/mtlogin/lib/cloudscraper"
 	"github.com/scjtqs2/mtlogin/lib/dgoogauth"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/tidwall/gjson"
-	"net/http"
-	"net/url"
-	"sync"
 )
 
 // Client http的请求处理合类
 type Client struct {
-	db        *leveldb.DB
-	ua        string
-	token     string
-	lock      sync.Mutex
-	proxy     *url.URL
-	MTeamAuth string
-	cfg       *Config
+	db         *leveldb.DB
+	ua         string
+	token      string
+	lock       sync.Mutex
+	proxy      *url.URL
+	MTeamAuth  string
+	cfg        *Config
+	Uploaded   string // 新增字段
+	Downloaded string // 新增字段
+	Bonus      string // 新增字段
+	g_Username string
 }
 
 func NewClient(dbPath, proxy string, cfg *Config) (*Client, error) {
@@ -135,9 +141,35 @@ func (c *Client) check() error {
 	fmt.Printf("headers %+v \r\n", res.Headers)
 	fmt.Printf("Cookies %s \r\n", res.Cookies)
 	fmt.Println("==================check end======================== ")
+
+	// 使用 gjson 解析 body
 	user_info := gjson.Parse(res.Body)
 	if user_info.Get("message").String() == "SUCCESS" {
 		fmt.Printf("用户信息获取成功\r\n")
+
+		// 提取 uploaded, downloaded, bonus
+		uploadedBitStr := user_info.Get("data.memberCount.uploaded").String()
+		downloadedBitStr := user_info.Get("data.memberCount.downloaded").String()
+		bonusStr := user_info.Get("data.memberCount.bonus").String()
+
+		// 字符串转换为整数
+		uploadedBit, err := strconv.ParseInt(uploadedBitStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("解析上传量失败: %v", err)
+		}
+		downloadedBit, err := strconv.ParseInt(downloadedBitStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("解析下载量失败: %v", err)
+		}
+
+		// 转换为吉比特
+		c.Uploaded = fmt.Sprintf("%.2f Gb", float64(uploadedBit)/1073741824)     // 处理上传量转换
+		c.Downloaded = fmt.Sprintf("%.2f Gb", float64(downloadedBit)/1073741824) // 处理下载量转换
+		c.Bonus = bonusStr                                                       // 假设奖金的单位不需要转换
+
+		// 提取 username
+		c.g_Username = user_info.Get("data.username").String() // 假设 username 在 data 下
+
 		// 更新最后访问时间
 		uu := fmt.Sprintf("https://%s/api/member/updateLastBrowse", apiHost)
 		res, err = client.Do(uu, options, http.MethodPost)
@@ -151,7 +183,6 @@ func (c *Client) check() error {
 			fmt.Printf("更新最后访问时间成功\r\n")
 			return nil
 		}
-		// _ = c.db.Delete([]byte(dbKey), nil)
 		return errors.New("连接成功，但更新状态失败")
 	}
 	// 连续失败5次
