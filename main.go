@@ -26,6 +26,8 @@ func defaultCfg() *Config {
 		WxCorpID:      "",
 		WxAgentSecret: "",
 		WxAgentID:     0,
+		MinDelay:      0, // 默认最小延迟为0分钟
+		MaxDelay:      0, // 默认最大延迟为30分钟
 	}
 }
 
@@ -85,6 +87,22 @@ func main() {
 			log.Fatalf("无法转换 AgentID 环境变量为整数: %v", err)
 		}
 		cfg.WxAgentID = WxAgentID
+	}
+	if os.Getenv("MINDELAY") != "" {
+		// 从环境变量读取 AgentID 字符串，并转换为 int
+		MinDelay, err := strconv.Atoi(os.Getenv("MINDELAY"))
+		if err != nil {
+			log.Fatalf("无法转换 MinDelay 环境变量为整数: %v", err)
+		}
+		cfg.MinDelay = MinDelay
+	}
+	if os.Getenv("MAXDELAY") != "" {
+		// 从环境变量读取 AgentID 字符串，并转换为 int
+		MaxDelay, err := strconv.Atoi(os.Getenv("MAXDELAY"))
+		if err != nil {
+			log.Fatalf("无法转换 MaxDelay 环境变量为整数: %v", err)
+		}
+		cfg.MaxDelay = MaxDelay
 	}
 	job, err := NewJobserver(cfg)
 	if err != nil {
