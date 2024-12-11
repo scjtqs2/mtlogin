@@ -6,28 +6,25 @@ import (
 	"strconv"
 )
 
-var (
-	dbPath  = "/data/cookie.db"
-	apiHost = "api.m-team.io"
-	timeOut = 60
-)
-
 const (
 	dbKey = "m-team-auth"
-	ua    = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0"
 )
 
+// defaultCfg 默认配置
 func defaultCfg() *Config {
 	return &Config{
 		Crontab:       "2 */2 * * *",
-		Referer:       "https://kp.m-team.cc/index",
+		ApiHost:       "api.m-team.io",
+		TimeOut:       60,
+		Referer:       "https://kp.m-team.cc",
 		MTeamAuth:     "",
-		Ua:            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+		Ua:            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
 		WxCorpID:      "",
 		WxAgentSecret: "",
 		WxAgentID:     0,
 		MinDelay:      0, // 默认最小延迟为0分钟
 		MaxDelay:      0, // 默认最大延迟为30分钟
+		DbPath:        "/data/cookie.db",
 	}
 }
 
@@ -59,20 +56,18 @@ func main() {
 	}
 	if os.Getenv("UA") != "" {
 		cfg.Ua = os.Getenv("UA")
-	} else {
-		cfg.Ua = ua
 	}
 	if os.Getenv("DB_PATH") != "" {
-		dbPath = os.Getenv("DB_PATH")
+		cfg.DbPath = os.Getenv("DB_PATH")
 	}
 	if os.Getenv("API_HOST") != "" {
-		apiHost = os.Getenv("API_HOST")
+		cfg.ApiHost = os.Getenv("API_HOST")
 	}
 	if os.Getenv("API_REFERER") != "" {
 		cfg.Referer = os.Getenv("API_REFERER")
 	}
 	if os.Getenv("TIME_OUT") != "" {
-		timeOut, _ = strconv.Atoi(os.Getenv("TIME_OUT"))
+		cfg.TimeOut, _ = strconv.Atoi(os.Getenv("TIME_OUT"))
 	}
 	if os.Getenv("WXCORPID") != "" {
 		cfg.WxCorpID = os.Getenv("WXCORPID")

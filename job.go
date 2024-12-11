@@ -25,12 +25,15 @@ type Config struct {
 	QqpushToken   string `yaml:"qqpush_token"`
 	MTeamAuth     string `yaml:"m_team_auth"`   // 直接提供登录的认证
 	Ua            string `yaml:"ua"`            // auth对应的user-agent
+	ApiHost       string `yaml:"api_host"`      // api的host地址。eg:"api.m-team.io"
 	Referer       string `yaml:"referer"`       // referer地址
 	WxCorpID      string `yaml:"WxCorpID"`      // 企业 ID
 	WxAgentSecret string `yaml:"WxAgentSecret"` // 应用密钥
 	WxAgentID     int    `yaml:"WxAgentID"`     // 应用 ID
 	MinDelay      int    `yaml:"min_delay"`     // 最小延迟（分钟）
 	MaxDelay      int    `yaml:"max_delay"`     // 最大延迟（分钟）
+	TimeOut       int    `yaml:"time_out"`      // api请求的超时时间(秒）
+	DbPath        string `yaml:"db_path"`       // 数据库存储位置
 }
 
 type Jobserver struct {
@@ -51,7 +54,7 @@ func NewJobserver(cfg *Config) (*Jobserver, error) {
 		return nil, err
 	}
 
-	s.client, err = NewClient(dbPath, s.cfg.Proxy, cfg)
+	s.client, err = NewClient(cfg.DbPath, s.cfg.Proxy, cfg)
 	if err != nil {
 		panic(err)
 	}

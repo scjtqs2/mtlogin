@@ -44,7 +44,7 @@ func NewClient(dbPath, proxy string, cfg *Config) (*Client, error) {
 // login 通过账号密码+otp秘钥登录来获取auth
 func (c *Client) login(username, password, totpSecret string) error {
 	if c.ua == "" {
-		c.ua = ua
+		c.ua = c.cfg.Ua
 	}
 	ck, _ := c.db.Get([]byte(dbKey), nil)
 	var needLogin bool
@@ -54,7 +54,7 @@ func (c *Client) login(username, password, totpSecret string) error {
 		needLogin = true
 	}
 	if needLogin {
-		u := fmt.Sprintf("https://%s/api/login", apiHost)
+		u := fmt.Sprintf("https://%s/api/login", c.cfg.ApiHost)
 		// 二次验证
 		tk, err := dgoogauth.GetTOTPToken(totpSecret)
 		if err != nil {
@@ -73,7 +73,7 @@ func (c *Client) login(username, password, totpSecret string) error {
 		options := cycletls.Options{
 			Headers:         make(map[string]string),
 			Body:            body.Encode(),
-			Timeout:         timeOut,
+			Timeout:         c.cfg.TimeOut,
 			DisableRedirect: true,
 			UserAgent:       c.ua,
 		}
@@ -104,18 +104,18 @@ func (c *Client) login(username, password, totpSecret string) error {
 // check 校验auth是否有效，有效的话再进行签到更新
 func (c *Client) check() error {
 	if c.ua == "" {
-		c.ua = ua
+		c.ua = c.cfg.Ua
 	}
 	// 使用外部给的token
 	if c.MTeamAuth != "" {
 		c.token = c.MTeamAuth
 	}
-	u := fmt.Sprintf("https://%s/api/member/profile", apiHost)
+	u := fmt.Sprintf("https://%s/api/member/profile", c.cfg.ApiHost)
 	client, _ := cloudscraper.Init(false, false)
 	options := cycletls.Options{
 		Headers:         make(map[string]string),
 		Body:            "",
-		Timeout:         timeOut,
+		Timeout:         c.cfg.TimeOut,
 		DisableRedirect: true,
 		UserAgent:       c.ua,
 	}
@@ -171,7 +171,7 @@ func (c *Client) check() error {
 		c.g_Username = user_info.Get("data.username").String() // 假设 username 在 data 下
 
 		// 更新最后访问时间
-		uu := fmt.Sprintf("https://%s/api/member/updateLastBrowse", apiHost)
+		uu := fmt.Sprintf("https://%s/api/member/updateLastBrowse", c.cfg.ApiHost)
 		res, err = client.Do(uu, options, http.MethodPost)
 		fmt.Println("==================update start======================== ")
 		defer fmt.Println("==================update end======================== ")
