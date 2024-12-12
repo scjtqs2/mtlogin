@@ -119,7 +119,7 @@ func (j *Jobserver) sendErrorNotification(err error) {
 
 func (j *Jobserver) sendSuccessNotification() {
 
-	message := fmt.Sprintf("m-team 账号%s 刷新成功\n上传量: %s\n下载量: %s\n奖金: %s",
+	message := fmt.Sprintf("m-team 账号%s 刷新成功\n上传量: %s\n下载量: %s\n魔力值: %s",
 		j.client.g_Username,
 		j.client.Uploaded,
 		j.client.Downloaded,

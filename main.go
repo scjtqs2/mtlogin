@@ -16,7 +16,7 @@ func defaultCfg() *Config {
 		Crontab:       "2 */2 * * *",
 		ApiHost:       "api.m-team.io",
 		TimeOut:       60,
-		Referer:       "https://kp.m-team.cc",
+		Referer:       "https://kp.m-team.cc/",
 		MTeamAuth:     "",
 		Ua:            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
 		WxCorpID:      "",
