@@ -124,7 +124,7 @@ func (c *Client) check() error {
 	}
 	options.Headers["User-Agent"] = c.ua
 	options.Headers["referer"] = c.cfg.Referer
-	options.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
+	// options.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
 	options.Headers["Accept"] = "application/json;charset=UTF-8"
 	options.Headers["Authorization"] = fmt.Sprintf("%s", c.token)
 	res, err := client.Do(u, options, http.MethodPost)
@@ -141,7 +141,6 @@ func (c *Client) check() error {
 	fmt.Printf("headers %+v \r\n", res.Headers)
 	fmt.Printf("Cookies %s \r\n", res.Cookies)
 	fmt.Println("==================check end======================== ")
-
 	// 使用 gjson 解析 body
 	user_info := gjson.Parse(res.Body)
 	if user_info.Get("message").String() == "SUCCESS" {
@@ -169,6 +168,20 @@ func (c *Client) check() error {
 
 		// 提取 username
 		c.g_Username = user_info.Get("data.username").String() // 假设 username 在 data 下
+
+		// 请求ping操作
+		fmt.Println("==================ping start======================== ")
+		pu := fmt.Sprintf("https://%s/ping", c.cfg.ApiHost)
+		pong, err := client.Do(pu, options, http.MethodGet)
+		if err != nil {
+			fmt.Println("==================ping err1======================== ")
+			return err
+		}
+		if pong.Status != http.StatusOK {
+			fmt.Println("==================ping err2======================== ")
+			return errors.New(fmt.Sprintf("cookie已过期 status=%d;body=%s", pong.Status, pong.Body))
+		}
+		fmt.Println("==================ping end======================== ")
 
 		// 更新最后访问时间
 		uu := fmt.Sprintf("https://%s/api/member/updateLastBrowse", c.cfg.ApiHost)
