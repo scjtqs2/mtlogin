@@ -3,16 +3,16 @@ package main
 import (
 	"errors"
 	"fmt"
-	"net/http"
-	"net/url"
-	"strconv"
-	"sync"
-
 	"github.com/Danny-Dasilva/CycleTLS/cycletls"
 	"github.com/scjtqs2/mtlogin/lib/cloudscraper"
 	"github.com/scjtqs2/mtlogin/lib/dgoogauth"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/tidwall/gjson"
+	"net/http"
+	"net/url"
+	"strconv"
+	"sync"
+	"time"
 )
 
 // Client http的请求处理合类
@@ -28,6 +28,8 @@ type Client struct {
 	Downloaded string // 新增字段
 	Bonus      string // 新增字段
 	g_Username string
+	LastBrowse string
+	LastLogin  string
 }
 
 func NewClient(dbPath, proxy string, cfg *Config) (*Client, error) {
@@ -85,6 +87,7 @@ func (c *Client) login(username, password, totpSecret string) error {
 		// options.Headers["Content-Type"] = writer.FormDataContentType()
 		options.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
 		options.Headers["Accept"] = "application/json;charset=UTF-8"
+		options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
 		fmt.Println("==================login start======================== ")
 		defer fmt.Println("==================login end========================")
 		res, err := client.Do(u, options, http.MethodPost)
@@ -124,9 +127,10 @@ func (c *Client) check() error {
 	}
 	options.Headers["User-Agent"] = c.ua
 	options.Headers["referer"] = c.cfg.Referer
-	// options.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
+	options.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
 	options.Headers["Accept"] = "application/json;charset=UTF-8"
 	options.Headers["Authorization"] = fmt.Sprintf("%s", c.token)
+	options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
 	res, err := client.Do(u, options, http.MethodPost)
 	fmt.Println("==================check start======================== ")
 	if err != nil {
@@ -150,6 +154,8 @@ func (c *Client) check() error {
 		uploadedBitStr := user_info.Get("data.memberCount.uploaded").String()
 		downloadedBitStr := user_info.Get("data.memberCount.downloaded").String()
 		bonusStr := user_info.Get("data.memberCount.bonus").String()
+		c.LastLogin = user_info.Get("data.memberStatus.lastLogin").String()
+		c.LastBrowse = user_info.Get("data.memberStatus.lastBrowse").String()
 
 		// 字符串转换为整数
 		uploadedBit, err := strconv.ParseInt(uploadedBitStr, 10, 64)
@@ -169,19 +175,19 @@ func (c *Client) check() error {
 		// 提取 username
 		c.g_Username = user_info.Get("data.username").String() // 假设 username 在 data 下
 
-		// 请求ping操作
-		fmt.Println("==================ping start======================== ")
-		pu := fmt.Sprintf("https://%s/ping", c.cfg.ApiHost)
-		pong, err := client.Do(pu, options, http.MethodGet)
-		if err != nil {
-			fmt.Println("==================ping err1======================== ")
-			return err
-		}
-		if pong.Status != http.StatusOK {
-			fmt.Println("==================ping err2======================== ")
-			return errors.New(fmt.Sprintf("cookie已过期 status=%d;body=%s", pong.Status, pong.Body))
-		}
-		fmt.Println("==================ping end======================== ")
+		// // 请求ping操作
+		// fmt.Println("==================ping start======================== ")
+		// pu := fmt.Sprintf("https://%s/ping", c.cfg.ApiHost)
+		// pong, err := client.Do(pu, options, http.MethodGet)
+		// if err != nil {
+		// 	fmt.Println("==================ping err1======================== ")
+		// 	return err
+		// }
+		// if pong.Status != http.StatusOK {
+		// 	fmt.Println("==================ping err2======================== ")
+		// 	return errors.New(fmt.Sprintf("cookie已过期 status=%d;body=%s", pong.Status, pong.Body))
+		// }
+		// fmt.Println("==================ping end======================== ")
 
 		// 更新最后访问时间
 		uu := fmt.Sprintf("https://%s/api/member/updateLastBrowse", c.cfg.ApiHost)

@@ -119,11 +119,14 @@ func (j *Jobserver) sendErrorNotification(err error) {
 
 func (j *Jobserver) sendSuccessNotification() {
 
-	message := fmt.Sprintf("m-team 账号%s 刷新成功\n上传量: %s\n下载量: %s\n魔力值: %s",
+	message := fmt.Sprintf("m-team 账号%s 刷新成功\n上传量: %s\n下载量: %s\n魔力值: %s\n上次登录时间: %s\n上次刷新时间: %s",
 		j.client.g_Username,
 		j.client.Uploaded,
 		j.client.Downloaded,
-		j.client.Bonus)
+		j.client.Bonus,
+		j.client.LastLogin,
+		j.client.LastBrowse,
+	)
 
 	if j.cfg.Qqpush != "" {
 		qqpush.Qqpush(message, j.cfg.Qqpush, j.cfg.QqpushToken)
