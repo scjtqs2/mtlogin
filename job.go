@@ -68,8 +68,9 @@ func (j *Jobserver) scheduleLogin() {
 	// 生成随机的延迟（单位：分钟）
 	rand.New(rand.NewSource(time.Now().UnixNano()))
 	randomMinutes := rand.Intn(j.cfg.MaxDelay-j.cfg.MinDelay+1) + j.cfg.MinDelay
-	randomDelay := time.Duration(randomMinutes) * time.Minute
-	fmt.Printf("Random minutes for delay: %d\n", randomMinutes)
+	randomSeconds := rand.Intn(60) // 随机生成0-59秒
+	randomDelay := time.Duration(randomMinutes)*time.Minute + time.Duration(randomSeconds)*time.Second
+	fmt.Printf("Random minutes for delay: %d, Random seconds for delay: %d\n", randomMinutes, randomSeconds)
 	// 使用 goroutine 来在随机时间后执行登录
 	go func() {
 		time.Sleep(randomDelay)
