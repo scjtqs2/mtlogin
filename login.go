@@ -3,14 +3,17 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/Danny-Dasilva/CycleTLS/cycletls"
-	"github.com/scjtqs2/mtlogin/lib/cloudscraper"
+	"github.com/google/martian/log"
 	"github.com/scjtqs2/mtlogin/lib/dgoogauth"
+	"github.com/scjtqs2/mtlogin/lib/utls"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/tidwall/gjson"
+	"golang.org/x/net/http2"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -62,44 +65,38 @@ func (c *Client) login(username, password, totpSecret string) error {
 		if err != nil {
 			return err
 		}
-
+		log.Debugf("token: %s", tk)
 		body := url.Values{}
 		body.Add("username", username)
 		body.Add("password", password)
-		if err != nil {
-			return err
-		}
 		body.Add("otpCode", tk)
-
-		client, _ := cloudscraper.Init(false, false)
-		options := cycletls.Options{
-			Headers:         make(map[string]string),
-			Body:            body.Encode(),
-			Timeout:         c.cfg.TimeOut,
-			DisableRedirect: true,
-			UserAgent:       c.ua,
-		}
-		if c.proxy != nil {
-			options.Proxy = c.proxy.String()
-		}
-		options.Headers["User-Agent"] = c.ua
-		options.Headers["referer"] = c.cfg.Referer
-		// options.Headers["Content-Type"] = writer.FormDataContentType()
-		options.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
-		options.Headers["Accept"] = "application/json;charset=UTF-8"
-		options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
+		body.Add("turnstile", "")
+		options, _ := http.NewRequest(http.MethodPost, u, strings.NewReader(body.Encode()))
+		client := c.newClient()
+		options.Header.Add("User-Agent", c.ua)
+		options.Header.Add("referer", c.cfg.Referer)
+		options.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+		options.Header.Add("Accept", "application/json;charset=UTF-8")
+		options.Header.Add("Ts", strconv.FormatInt(time.Now().Unix(), 10))
 		fmt.Println("==================login start======================== ")
 		defer fmt.Println("==================login end========================")
-		res, err := client.Do(u, options, http.MethodPost)
+		res, err := client.Do(options)
 		if err != nil {
 			return err
 		}
-
-		fmt.Printf("body %s \r\n", res.Body)
-		fmt.Printf("headers %+v \r\n", res.Headers)
+		defer res.Body.Close()
+		bodyBytes, err := io.ReadAll(res.Body)
+		fmt.Printf("body %s \r\n", string(bodyBytes))
+		fmt.Printf("headers %+v \r\n", res.Header)
 		fmt.Printf("Cookies %s \r\n", res.Cookies)
-		c.token = res.Headers["Authorization"]
-		_ = c.db.Put([]byte(dbKey), []byte(c.token), nil)
+		resp := gjson.ParseBytes(bodyBytes)
+		if resp.Get("message").String() == "SUCCESS" {
+			c.token = res.Header.Get("Authorization")
+			_ = c.db.Put([]byte(dbKey), []byte(c.token), nil)
+			return nil
+		} else {
+			return errors.New(resp.Get("message").String())
+		}
 	}
 	return nil
 }
@@ -114,39 +111,32 @@ func (c *Client) check() error {
 		c.token = c.MTeamAuth
 	}
 	u := fmt.Sprintf("https://%s/api/member/profile", c.cfg.ApiHost)
-	client, _ := cloudscraper.Init(false, false)
-	options := cycletls.Options{
-		Headers:         make(map[string]string),
-		Body:            "",
-		Timeout:         c.cfg.TimeOut,
-		DisableRedirect: true,
-		UserAgent:       c.ua,
-	}
-	if c.proxy != nil {
-		options.Proxy = c.proxy.String()
-	}
-	options.Headers["User-Agent"] = c.ua
-	options.Headers["referer"] = c.cfg.Referer
-	options.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
-	options.Headers["Accept"] = "application/json;charset=UTF-8"
-	options.Headers["Authorization"] = fmt.Sprintf("%s", c.token)
-	options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
-	res, err := client.Do(u, options, http.MethodPost)
+	client := c.newClient()
+	options, _ := http.NewRequest(http.MethodPost, u, strings.NewReader(""))
+	options.Header.Add("User-Agent", c.ua)
+	options.Header.Add("referer", c.cfg.Referer)
+	options.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+	options.Header.Add("Accept", "application/json;charset=UTF-8")
+	options.Header.Add("Authorization", fmt.Sprintf("%s", c.token))
+	options.Header.Add("Ts", strconv.FormatInt(time.Now().Unix(), 10))
+	res, err := client.Do(options)
 	fmt.Println("==================check start======================== ")
 	if err != nil {
 		fmt.Println("==================check end======================== ")
 		return err
 	}
-	if res.Status != http.StatusOK {
+	if res.StatusCode != http.StatusOK {
 		fmt.Println("==================check end======================== ")
 		return errors.New(fmt.Sprintf("cookie已过期 status=%d;body=%s", res.Status, res.Body))
 	}
-	fmt.Printf("body %s \r\n", res.Body)
-	fmt.Printf("headers %+v \r\n", res.Headers)
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+	fmt.Printf("body %s \r\n", string(body))
+	fmt.Printf("headers %+v \r\n", res.Header)
 	fmt.Printf("Cookies %s \r\n", res.Cookies)
 	fmt.Println("==================check end======================== ")
 	// 使用 gjson 解析 body
-	user_info := gjson.Parse(res.Body)
+	user_info := gjson.ParseBytes(body)
 	if user_info.Get("message").String() == "SUCCESS" {
 		fmt.Printf("用户信息获取成功\r\n")
 
@@ -191,13 +181,28 @@ func (c *Client) check() error {
 
 		// 更新最后访问时间
 		uu := fmt.Sprintf("https://%s/api/member/updateLastBrowse", c.cfg.ApiHost)
-		res, err = client.Do(uu, options, http.MethodPost)
+		// res, err = client.Do(uu, options, http.MethodPost)
+		options, _ = http.NewRequest(http.MethodPost, uu, strings.NewReader(""))
+		options.Header.Add("User-Agent", c.ua)
+		options.Header.Add("referer", c.cfg.Referer)
+		options.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+		options.Header.Add("Accept", "application/json;charset=UTF-8")
+		options.Header.Add("Authorization", fmt.Sprintf("%s", c.token))
+		options.Header.Add("Ts", strconv.FormatInt(time.Now().Unix(), 10))
+		res, err = client.Do(options)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+		body, _ = io.ReadAll(res.Body)
 		fmt.Println("==================update start======================== ")
 		defer fmt.Println("==================update end======================== ")
-		fmt.Printf("body %s \r\n", res.Body)
-		fmt.Printf("headers %+v \r\n", res.Headers)
+		fmt.Printf("body %s \r\n", string(body))
+		fmt.Printf("headers %+v \r\n", res.Header)
 		fmt.Printf("Cookies %s \r\n", res.Cookies)
-		if res.JSONBody()["message"] == "SUCCESS" {
+
+		resp := gjson.ParseBytes(body)
+		if resp.Get("message").String() == "SUCCESS" {
 			failedCount = 0
 			fmt.Printf("更新最后访问时间成功\r\n")
 			return nil
@@ -209,4 +214,20 @@ func (c *Client) check() error {
 		_ = c.db.Delete([]byte(dbKey), nil)
 	}
 	return errors.New("cookie已过期")
+}
+
+func (c *Client) newClient() *http.Client {
+	tr1 := &http.Transport{}
+	tr2 := &http2.Transport{}
+	if c.proxy != nil {
+		tr1.Proxy = http.ProxyURL(c.proxy)
+	}
+	cli := &http.Client{
+		Transport: &utls.UTransport{
+			Tr1: tr1,
+			Tr2: tr2,
+		},
+		Timeout: time.Duration(c.cfg.TimeOut) * time.Second,
+	}
+	return cli
 }
