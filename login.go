@@ -103,6 +103,12 @@ func (c *Client) login(username, password, totpSecret string) error {
 
 // check 校验auth是否有效，有效的话再进行签到更新
 func (c *Client) check() error {
+	defer func() {
+		// 连续失败5次
+		if failedCount >= 5 {
+			_ = c.db.Delete([]byte(dbKey), nil)
+		}
+	}()
 	if c.ua == "" {
 		c.ua = c.cfg.Ua
 	}
@@ -209,10 +215,10 @@ func (c *Client) check() error {
 		}
 		return errors.New("连接成功，但更新状态失败")
 	}
-	// 连续失败5次
-	if failedCount >= 5 {
-		_ = c.db.Delete([]byte(dbKey), nil)
-	}
+	// // 连续失败5次
+	// if failedCount >= 5 {
+	// 	_ = c.db.Delete([]byte(dbKey), nil)
+	// }
 	return errors.New("cookie已过期")
 }
 
