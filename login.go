@@ -3,17 +3,17 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/Danny-Dasilva/CycleTLS/cycletls"
 	"github.com/google/martian/log"
+	"github.com/scjtqs2/mtlogin/lib/cloudscraper"
 	"github.com/scjtqs2/mtlogin/lib/dgoogauth"
 	"github.com/scjtqs2/mtlogin/lib/utls"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/tidwall/gjson"
 	"golang.org/x/net/http2"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -33,6 +33,7 @@ type Client struct {
 	g_Username string
 	LastBrowse string
 	LastLogin  string
+	client     *cloudscraper.CloudScrapper
 }
 
 func NewClient(dbPath, proxy string, cfg *Config) (*Client, error) {
@@ -43,6 +44,7 @@ func NewClient(dbPath, proxy string, cfg *Config) (*Client, error) {
 		return nil, err
 	}
 	c.proxy, err = url.Parse(proxy)
+	c.client, _ = cloudscraper.Init(false, false)
 	return c, nil
 }
 
@@ -71,27 +73,48 @@ func (c *Client) login(username, password, totpSecret string) error {
 		body.Add("password", password)
 		body.Add("otpCode", tk)
 		body.Add("turnstile", "")
-		options, _ := http.NewRequest(http.MethodPost, u, strings.NewReader(body.Encode()))
-		client := c.newClient()
-		options.Header.Add("User-Agent", c.ua)
-		options.Header.Add("referer", c.cfg.Referer)
-		options.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-		options.Header.Add("Accept", "application/json;charset=UTF-8")
-		options.Header.Add("Ts", strconv.FormatInt(time.Now().Unix(), 10))
+		// options, _ := http.NewRequest(http.MethodPost, u, strings.NewReader(body.Encode()))
+		// client := c.newClient()
+		// options.Header.Add("User-Agent", c.ua)
+		// options.Header.Add("referer", c.cfg.Referer)
+		// options.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+		// options.Header.Add("Accept", "application/json;charset=UTF-8")
+		// options.Header.Add("Ts", strconv.FormatInt(time.Now().Unix(), 10))
+		options := cycletls.Options{
+			Headers:         make(map[string]string),
+			Body:            body.Encode(),
+			Timeout:         c.cfg.TimeOut,
+			DisableRedirect: true,
+			UserAgent:       c.ua,
+		}
+		if c.proxy != nil {
+			options.Proxy = c.proxy.String()
+		}
+		options.Headers["User-Agent"] = c.ua
+		options.Headers["referer"] = c.cfg.Referer
+		// options.Headers["Content-Type"] = writer.FormDataContentType()
+		options.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
+		options.Headers["Accept"] = "application/json;charset=UTF-8"
+		options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
 		fmt.Println("==================login start======================== ")
 		defer fmt.Println("==================login end========================")
-		res, err := client.Do(options)
-		if err != nil {
-			return err
-		}
-		defer res.Body.Close()
-		bodyBytes, err := io.ReadAll(res.Body)
-		fmt.Printf("body %s \r\n", string(bodyBytes))
-		fmt.Printf("headers %+v \r\n", res.Header)
+		// res, err := client.Do(options)
+		// if err != nil {
+		// 	return err
+		// }
+		// defer res.Body.Close()
+		// res, err := client.Do(options)
+		res, err := c.client.Do(u, options, http.MethodPost)
+		// bodyBytes, err := io.ReadAll(res.Body)
+		fmt.Printf("body %s \r\n", res.Body)
+		fmt.Printf("headers %+v \r\n", res.Headers)
 		fmt.Printf("Cookies %+v \r\n", res.Cookies)
-		resp := gjson.ParseBytes(bodyBytes)
+		if err != nil || res.Status != http.StatusOK {
+			return errors.New(fmt.Sprintf("登录失败 status=%d;body=%s", res.Status, res.Body))
+		}
+		resp := gjson.Parse(res.Body)
 		if resp.Get("message").String() == "SUCCESS" {
-			c.token = res.Header.Get("Authorization")
+			c.token = res.Headers["Authorization"]
 			_ = c.db.Put([]byte(dbKey), []byte(c.token), nil)
 			return nil
 		} else {
@@ -111,32 +134,49 @@ func (c *Client) check() error {
 		c.token = c.MTeamAuth
 	}
 	u := fmt.Sprintf("https://%s/api/member/profile", c.cfg.ApiHost)
-	client := c.newClient()
-	options, _ := http.NewRequest(http.MethodPost, u, strings.NewReader(""))
-	options.Header.Add("User-Agent", c.ua)
-	options.Header.Add("referer", c.cfg.Referer)
-	options.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-	options.Header.Add("Accept", "application/json;charset=UTF-8")
-	options.Header.Add("Authorization", fmt.Sprintf("%s", c.token))
-	options.Header.Add("Ts", strconv.FormatInt(time.Now().Unix(), 10))
-	res, err := client.Do(options)
+	// client := c.newClient()
+	// options, _ := http.NewRequest(http.MethodPost, u, strings.NewReader(""))
+	// options.Header.Add("User-Agent", c.ua)
+	// options.Header.Add("referer", c.cfg.Referer)
+	// options.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+	// options.Header.Add("Accept", "application/json;charset=UTF-8")
+	// options.Header.Add("Authorization", fmt.Sprintf("%s", c.token))
+	// options.Header.Add("Ts", strconv.FormatInt(time.Now().Unix(), 10))
+	// res, err := client.Do(options)
+	options := cycletls.Options{
+		Headers:         make(map[string]string),
+		Body:            "",
+		Timeout:         c.cfg.TimeOut,
+		DisableRedirect: true,
+		UserAgent:       c.ua,
+	}
+	if c.proxy != nil {
+		options.Proxy = c.proxy.String()
+	}
+	options.Headers["User-Agent"] = c.ua
+	options.Headers["referer"] = c.cfg.Referer
+	options.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
+	options.Headers["Accept"] = "application/json;charset=UTF-8"
+	options.Headers["Authorization"] = fmt.Sprintf("%s", c.token)
+	options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
+	res, err := c.client.Do(u, options, http.MethodPost)
 	fmt.Println("==================check start======================== ")
 	if err != nil {
 		fmt.Println("==================check end======================== ")
 		return err
 	}
-	if res.StatusCode != http.StatusOK {
+	if res.Status != http.StatusOK {
 		fmt.Println("==================check end======================== ")
 		return errors.New(fmt.Sprintf("cookie已过期 status=%d;body=%s", res.Status, res.Body))
 	}
-	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
-	fmt.Printf("body %s \r\n", string(body))
-	fmt.Printf("headers %+v \r\n", res.Header)
+	// defer res.Body.Close()
+	// body, _ := io.ReadAll(res.Body)
+	fmt.Printf("body %s \r\n", res.Body)
+	fmt.Printf("headers %+v \r\n", res.Headers)
 	fmt.Printf("Cookies %+v \r\n", res.Cookies)
 	fmt.Println("==================check end======================== ")
 	// 使用 gjson 解析 body
-	user_info := gjson.ParseBytes(body)
+	user_info := gjson.Parse(res.Body)
 	if user_info.Get("message").String() == "SUCCESS" {
 		fmt.Printf("用户信息获取成功\r\n")
 
@@ -181,27 +221,27 @@ func (c *Client) check() error {
 
 		// 更新最后访问时间
 		uu := fmt.Sprintf("https://%s/api/member/updateLastBrowse", c.cfg.ApiHost)
-		// res, err = client.Do(uu, options, http.MethodPost)
-		options, _ = http.NewRequest(http.MethodPost, uu, strings.NewReader(""))
-		options.Header.Add("User-Agent", c.ua)
-		options.Header.Add("referer", c.cfg.Referer)
-		options.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-		options.Header.Add("Accept", "application/json;charset=UTF-8")
-		options.Header.Add("Authorization", fmt.Sprintf("%s", c.token))
-		options.Header.Add("Ts", strconv.FormatInt(time.Now().Unix(), 10))
-		res, err = client.Do(options)
-		if err != nil {
-			return err
-		}
-		defer res.Body.Close()
-		body, _ = io.ReadAll(res.Body)
+		res, err = c.client.Do(uu, options, http.MethodPost)
+		// options, _ = http.NewRequest(http.MethodPost, uu, strings.NewReader(""))
+		// options.Header.Add("User-Agent", c.ua)
+		// options.Header.Add("referer", c.cfg.Referer)
+		// options.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+		// options.Header.Add("Accept", "application/json;charset=UTF-8")
+		// options.Header.Add("Authorization", fmt.Sprintf("%s", c.token))
+		// options.Header.Add("Ts", strconv.FormatInt(time.Now().Unix(), 10))
+		// res, err = client.Do(options)
+		// if err != nil {
+		// 	return err
+		// }
+		// defer res.Body.Close()
+		// body, _ = io.ReadAll(res.Body)
 		fmt.Println("==================update start======================== ")
 		defer fmt.Println("==================update end======================== ")
-		fmt.Printf("body %s \r\n", string(body))
-		fmt.Printf("headers %+v \r\n", res.Header)
+		fmt.Printf("body %s \r\n", res.Body)
+		fmt.Printf("headers %+v \r\n", res.Headers)
 		fmt.Printf("Cookies %+v \r\n", res.Cookies)
 
-		resp := gjson.ParseBytes(body)
+		resp := gjson.Parse(res.Body)
 		if resp.Get("message").String() == "SUCCESS" {
 			fmt.Printf("更新最后访问时间成功\r\n")
 			return nil
@@ -211,16 +251,19 @@ func (c *Client) check() error {
 	return errors.New("cookie已过期")
 }
 
+// newClient 另类的实现模拟浏览器指纹。暂时不支持proxy。目前过cf暂时还不用这么极端的控制参数。先放着吧。
 func (c *Client) newClient() *http.Client {
 	tr1 := &http.Transport{}
-	tr2 := &http2.Transport{}
-	if c.proxy != nil {
-		tr1.Proxy = http.ProxyURL(c.proxy)
+	tr2 := &http2.Transport{
+		MaxDecoderHeaderTableSize: 1 << 16,
 	}
+
 	cli := &http.Client{
 		Transport: &utls.UTransport{
-			Tr1: tr1,
-			Tr2: tr2,
+			Tr1:     tr1,
+			Tr2:     tr2,
+			Proxy:   c.proxy,
+			Timeout: time.Duration(c.cfg.TimeOut) * time.Second,
 		},
 		Timeout: time.Duration(c.cfg.TimeOut) * time.Second,
 	}

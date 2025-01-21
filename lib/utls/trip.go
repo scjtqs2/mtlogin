@@ -7,12 +7,15 @@ import (
 	"golang.org/x/net/http2"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 )
 
 type UTransport struct {
-	Tr1 *http.Transport
-	Tr2 *http2.Transport
+	Tr1     *http.Transport
+	Tr2     *http2.Transport
+	Proxy   *url.URL
+	Timeout time.Duration
 }
 
 func (u *UTransport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -26,9 +29,11 @@ func (u *UTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if port == "" {
 		port = "443"
 	}
-
+	if u.Timeout == 0 {
+		u.Timeout = 10 * time.Second
+	}
 	// TCP connection
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%s", req.URL.Hostname(), port), 10*time.Second)
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%s", req.URL.Hostname(), port), u.Timeout)
 	if err != nil {
 		return nil, fmt.Errorf("net.DialTimeout error: %+v", err)
 	}
@@ -89,7 +94,7 @@ func (*UTransport) newSpec() *tls.ClientHelloSpec {
 			&tls.SupportedCurvesExtension{Curves: []tls.CurveID{tls.GREASE_PLACEHOLDER, tls.X25519, tls.CurveP256, tls.CurveP384}},
 			&tls.SupportedPointsExtension{SupportedPoints: []byte{0x0}}, // uncompressed
 			&tls.SessionTicketExtension{},
-			&tls.ALPNExtension{AlpnProtocols: []string{"http/1.1"}},
+			&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
 			&tls.StatusRequestExtension{},
 			&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{0x0403, 0x0804, 0x0401, 0x0503, 0x0805, 0x0501, 0x0806, 0x0601}},
 			&tls.SCTExtension{},
