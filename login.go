@@ -53,7 +53,7 @@ func (c *Client) login(username, password, totpSecret string) error {
 	}
 	ck, _ := c.db.Get([]byte(dbKey), nil)
 	var needLogin bool
-	if ck != nil {
+	if ck != nil && string(ck) != "" {
 		c.token = string(ck)
 	} else {
 		needLogin = true
@@ -88,7 +88,7 @@ func (c *Client) login(username, password, totpSecret string) error {
 		bodyBytes, err := io.ReadAll(res.Body)
 		fmt.Printf("body %s \r\n", string(bodyBytes))
 		fmt.Printf("headers %+v \r\n", res.Header)
-		fmt.Printf("Cookies %s \r\n", res.Cookies)
+		fmt.Printf("Cookies %+v \r\n", res.Cookies)
 		resp := gjson.ParseBytes(bodyBytes)
 		if resp.Get("message").String() == "SUCCESS" {
 			c.token = res.Header.Get("Authorization")
@@ -103,12 +103,6 @@ func (c *Client) login(username, password, totpSecret string) error {
 
 // check 校验auth是否有效，有效的话再进行签到更新
 func (c *Client) check() error {
-	defer func() {
-		// 连续失败5次
-		if failedCount >= 5 {
-			_ = c.db.Delete([]byte(dbKey), nil)
-		}
-	}()
 	if c.ua == "" {
 		c.ua = c.cfg.Ua
 	}
@@ -139,7 +133,7 @@ func (c *Client) check() error {
 	body, _ := io.ReadAll(res.Body)
 	fmt.Printf("body %s \r\n", string(body))
 	fmt.Printf("headers %+v \r\n", res.Header)
-	fmt.Printf("Cookies %s \r\n", res.Cookies)
+	fmt.Printf("Cookies %+v \r\n", res.Cookies)
 	fmt.Println("==================check end======================== ")
 	// 使用 gjson 解析 body
 	user_info := gjson.ParseBytes(body)
@@ -205,20 +199,15 @@ func (c *Client) check() error {
 		defer fmt.Println("==================update end======================== ")
 		fmt.Printf("body %s \r\n", string(body))
 		fmt.Printf("headers %+v \r\n", res.Header)
-		fmt.Printf("Cookies %s \r\n", res.Cookies)
+		fmt.Printf("Cookies %+v \r\n", res.Cookies)
 
 		resp := gjson.ParseBytes(body)
 		if resp.Get("message").String() == "SUCCESS" {
-			failedCount = 0
 			fmt.Printf("更新最后访问时间成功\r\n")
 			return nil
 		}
 		return errors.New("连接成功，但更新状态失败")
 	}
-	// // 连续失败5次
-	// if failedCount >= 5 {
-	// 	_ = c.db.Delete([]byte(dbKey), nil)
-	// }
 	return errors.New("cookie已过期")
 }
 

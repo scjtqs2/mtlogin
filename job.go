@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/google/martian/log"
@@ -12,8 +13,6 @@ import (
 	"github.com/scjtqs2/mtlogin/lib/qqpush"
 	"github.com/scjtqs2/mtlogin/lib/weixin"
 )
-
-var failedCount int = 0 // 失败次数
 
 type Config struct {
 	UserName      string `yaml:"username"`    // m-team账号
@@ -36,10 +35,17 @@ type Config struct {
 	DbPath        string `yaml:"db_path"`       // 数据库存储位置
 }
 
+const (
+	CookieModeNormal = "normal" // 普通模式
+	CookieModeStrict = "strict" // 严格模式
+)
+
 type Jobserver struct {
-	Cron   *cron.Cron
-	cfg    *Config
-	client *Client
+	Cron        *cron.Cron
+	cfg         *Config
+	client      *Client
+	failedCount int // 失败次数
+	cookieMode  string
 }
 
 func NewJobserver(cfg *Config) (*Jobserver, error) {
@@ -60,6 +66,7 @@ func NewJobserver(cfg *Config) (*Jobserver, error) {
 	}
 	s.client.ua = cfg.Ua
 	s.client.MTeamAuth = cfg.MTeamAuth
+	s.cookieMode = os.Getenv("COOKIE_MODE")
 
 	return s, nil
 }
@@ -85,7 +92,11 @@ func (j *Jobserver) Loop() error {
 
 func (j *Jobserver) checkToken() {
 	fmt.Printf("checkToken \r\n")
-
+	defer func() {
+		if j.failedCount > 5 {
+			_ = j.client.db.Delete([]byte(dbKey), nil) // 连续失败6次清理cookie
+		}
+	}()
 	// 如果 MTeamAuth 为空，则尝试登录
 	if j.cfg.MTeamAuth == "" {
 		err := j.client.login(j.cfg.UserName, j.cfg.Password, j.cfg.TotpSecret)
@@ -99,12 +110,15 @@ func (j *Jobserver) checkToken() {
 	// 检查 token
 	err := j.client.check()
 	if err != nil {
-		failedCount++
+		j.failedCount++
+		if j.cookieMode == CookieModeStrict {
+			_ = j.client.db.Delete([]byte(dbKey), nil) // 直接清理cookie
+		}
 		log.Errorf("m-team check token failed err=%v", err)
 		j.sendErrorNotification(err)
 		return
 	}
-
+	j.failedCount = 0
 	// 成功时发送通知
 	j.sendSuccessNotification()
 }

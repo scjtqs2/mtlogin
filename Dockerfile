@@ -33,6 +33,7 @@ ENV TZ="Asia/Shanghai"
 ENV UID=99
 ENV GID=100
 ENV UMASK=002
+ENV COOKIE_MODE="normal"
 
 COPY --from=builder /build/mtlogin /app/
 
