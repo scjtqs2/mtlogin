@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"github.com/Danny-Dasilva/CycleTLS/cycletls"
@@ -23,6 +24,7 @@ type Client struct {
 	db         *leveldb.DB
 	ua         string
 	token      string
+	did        string
 	lock       sync.Mutex
 	proxy      *url.URL
 	MTeamAuth  string
@@ -54,9 +56,11 @@ func (c *Client) login(username, password, totpSecret string) error {
 		c.ua = c.cfg.Ua
 	}
 	ck, _ := c.db.Get([]byte(dbKey), nil)
+	did, _ := c.db.Get([]byte(didKey), nil)
 	var needLogin bool
-	if ck != nil && string(ck) != "" {
+	if ck != nil && string(ck) != "" && string(did) != "" {
 		c.token = string(ck)
+		c.did = string(did)
 	} else {
 		needLogin = true
 	}
@@ -90,6 +94,7 @@ func (c *Client) login(username, password, totpSecret string) error {
 		if c.proxy != nil {
 			options.Proxy = c.proxy.String()
 		}
+		didstr, err := SecureRandomString(32)
 		options.Headers["User-Agent"] = c.ua
 		options.Headers["referer"] = c.cfg.Referer
 		// options.Headers["Content-Type"] = writer.FormDataContentType()
@@ -98,6 +103,7 @@ func (c *Client) login(username, password, totpSecret string) error {
 		options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
 		options.Headers["version"] = c.cfg.Version
 		options.Headers["webversion"] = c.cfg.WebVersion
+		options.Headers["did"] = didstr
 		fmt.Println("==================login start======================== ")
 		defer fmt.Println("==================login end========================")
 		// res, err := client.Do(options)
@@ -117,7 +123,9 @@ func (c *Client) login(username, password, totpSecret string) error {
 		resp := gjson.Parse(res.Body)
 		if resp.Get("message").String() == "SUCCESS" {
 			c.token = res.Headers["Authorization"]
+			c.did = res.Headers["Did"]
 			_ = c.db.Put([]byte(dbKey), []byte(c.token), nil)
+			_ = c.db.Put([]byte(didKey), []byte(c.did), nil)
 			return nil
 		} else {
 			return errors.New(resp.Get("message").String())
@@ -157,12 +165,16 @@ func (c *Client) check() error {
 	}
 	options.Headers["User-Agent"] = c.ua
 	options.Headers["referer"] = c.cfg.Referer
+	options.Headers["origin"] = c.cfg.Referer
 	options.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
 	options.Headers["Accept"] = "application/json;charset=UTF-8"
 	options.Headers["Authorization"] = fmt.Sprintf("%s", c.token)
 	options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
 	options.Headers["version"] = c.cfg.Version
 	options.Headers["webversion"] = c.cfg.WebVersion
+	options.Headers["did"] = c.did
+	// 调用之前请求一下funcState
+	c.funcState(options)
 	res, err := c.client.Do(u, options, http.MethodPost)
 	fmt.Println("==================check start======================== ")
 	if err != nil {
@@ -179,6 +191,8 @@ func (c *Client) check() error {
 	fmt.Printf("headers %+v \r\n", res.Headers)
 	fmt.Printf("Cookies %+v \r\n", res.Cookies)
 	fmt.Println("==================check end======================== ")
+	fmt.Println("token:", c.token)
+	fmt.Println("did:", c.did)
 	// 使用 gjson 解析 body
 	user_info := gjson.Parse(res.Body)
 	if user_info.Get("message").String() == "SUCCESS" {
@@ -222,7 +236,7 @@ func (c *Client) check() error {
 		// 	return errors.New(fmt.Sprintf("cookie已过期 status=%d;body=%s", pong.Status, pong.Body))
 		// }
 		// fmt.Println("==================ping end======================== ")
-
+		c.funcState(options)
 		// 更新最后访问时间
 		uu := fmt.Sprintf("https://%s/api/member/updateLastBrowse", c.cfg.ApiHost)
 		res, err = c.client.Do(uu, options, http.MethodPost)
@@ -255,6 +269,18 @@ func (c *Client) check() error {
 	return errors.New("cookie已过期")
 }
 
+// funcState 调用 profile之前需要调用一次
+func (c *Client) funcState(options cycletls.Options) error {
+	u := fmt.Sprintf("https://%s/api/member/profile", c.cfg.ApiHost)
+	res, err := c.client.Do(u, options, http.MethodPost)
+	if err != nil {
+		return err
+	}
+	g := gjson.Parse(res.Body)
+	fmt.Printf("body %s \r\n", g.String())
+	return nil
+}
+
 // newClient 另类的实现模拟浏览器指纹。暂时不支持proxy。目前过cf暂时还不用这么极端的控制参数。先放着吧。
 func (c *Client) newClient() *http.Client {
 	tr1 := &http.Transport{}
@@ -272,4 +298,68 @@ func (c *Client) newClient() *http.Client {
 		Timeout: time.Duration(c.cfg.TimeOut) * time.Second,
 	}
 	return cli
+}
+
+// SecureRandomString 生成密码学安全的随机字符串（小写字母+数字）
+// 参数：
+//
+//	length: 需要生成的字符串长度（必须 > 0）
+//
+// 返回值：
+//
+//	string: 生成的随机字符串
+//	error: 错误信息
+func SecureRandomString(length int) (string, error) {
+	// 参数验证错误
+	var (
+		ErrInvalidLength = errors.New("length must be positive integer")
+		ErrCharsetTooBig = errors.New("charset size exceeds 256")
+	)
+	// 参数验证
+	if length <= 0 {
+		return "", ErrInvalidLength
+	}
+	if len(charset) > 256 {
+		return "", ErrCharsetTooBig
+	}
+
+	// 预计算常量
+	const (
+		bufferSize    = 512              // 随机数批量读取缓冲区大小
+		maxByte       = 255 - (255 % 36) // 252 (当字符集为36时)
+		charsetLength = 36               // len(charset)
+	)
+
+	// 初始化结果缓冲区
+	result := make([]byte, length)
+
+	// 创建随机数缓冲池
+	pool := make([]byte, bufferSize)
+	poolIndex := 0
+
+	// 主生成循环
+	for i := 0; i < length; {
+		// 当缓冲池耗尽时重新填充
+		if poolIndex >= bufferSize {
+			if _, err := rand.Read(pool); err != nil {
+				return "", err
+			}
+			poolIndex = 0
+		}
+
+		// 获取随机字节
+		b := pool[poolIndex]
+		poolIndex++
+
+		// 筛选有效字节（避免模运算偏差）
+		if b > maxByte {
+			continue
+		}
+
+		// 写入结果
+		result[i] = charset[b%charsetLength]
+		i++ // 仅当获得有效字节时递增
+	}
+
+	return string(result), nil
 }

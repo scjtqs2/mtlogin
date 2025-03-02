@@ -7,7 +7,9 @@ import (
 )
 
 const (
-	dbKey = "m-team-auth"
+	dbKey   = "m-team-auth"
+	didKey  = "m-team-did"
+	charset = "1234567890abcdefghijklmnopqrstuvwxyz"
 )
 
 // defaultCfg 默认配置
