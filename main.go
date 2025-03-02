@@ -29,6 +29,7 @@ func defaultCfg() *Config {
 		DbPath:        "/data/cookie.db",
 		Version:       "1.1.2",
 		WebVersion:    "1120",
+		Did:           "",
 	}
 }
 
@@ -63,6 +64,9 @@ func main() {
 	}
 	if os.Getenv("M_TEAM_AUTH") != "" {
 		cfg.MTeamAuth = os.Getenv("M_TEAM_AUTH")
+	}
+	if os.Getenv("M_TEAM_DID") != "" {
+		cfg.Did = os.Getenv("M_TEAM_DID")
 	}
 	if os.Getenv("UA") != "" {
 		cfg.Ua = os.Getenv("UA")

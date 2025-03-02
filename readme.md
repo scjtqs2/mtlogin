@@ -33,6 +33,7 @@
 | COOKIE_MODE   | cookie更新模式，"normal"(默认）,连续失败6次才删。"strict"，每次失败都会删掉cookie尝试重新登录 |
 | VERSION       | http_header里面的version版本号，eg 1.1.2                              |
 | WEB_VERSION   | http_header里面的webversion版本号, eg 1120                           |
+| M_TEAM_DID    | http_header里面的did参数。和M_TEAM_AUTH绑定。仅在使用M_TEAM_AUTH的时候需要填       |
 
 ## docker
 

@@ -35,6 +35,7 @@ type Config struct {
 	DbPath        string `yaml:"db_path"`       // 数据库存储位置
 	Version       string `yaml:"version"`       // 系统版本号
 	WebVersion    string `yaml:"web_version"`   // web版本号
+	Did           string `yaml:"did"`
 }
 
 const (
@@ -68,6 +69,7 @@ func NewJobserver(cfg *Config) (*Jobserver, error) {
 	}
 	s.client.ua = cfg.Ua
 	s.client.MTeamAuth = cfg.MTeamAuth
+	s.client.did = cfg.Did
 	s.cookieMode = os.Getenv("COOKIE_MODE")
 
 	return s, nil
@@ -100,7 +102,7 @@ func (j *Jobserver) checkToken() {
 		}
 	}()
 	// 如果 MTeamAuth 为空，则尝试登录
-	if j.cfg.MTeamAuth == "" {
+	if j.cfg.MTeamAuth == "" && j.cfg.Did == "" {
 		err := j.client.login(j.cfg.UserName, j.cfg.Password, j.cfg.TotpSecret)
 		if err != nil {
 			log.Errorf("m-team login failed err=%v", err)
