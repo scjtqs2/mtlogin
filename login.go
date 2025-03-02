@@ -96,6 +96,8 @@ func (c *Client) login(username, password, totpSecret string) error {
 		options.Headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
 		options.Headers["Accept"] = "application/json;charset=UTF-8"
 		options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
+		options.Headers["version"] = c.cfg.Version
+		options.Headers["webversion"] = c.cfg.WebVersion
 		fmt.Println("==================login start======================== ")
 		defer fmt.Println("==================login end========================")
 		// res, err := client.Do(options)
@@ -159,6 +161,8 @@ func (c *Client) check() error {
 	options.Headers["Accept"] = "application/json;charset=UTF-8"
 	options.Headers["Authorization"] = fmt.Sprintf("%s", c.token)
 	options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
+	options.Headers["version"] = c.cfg.Version
+	options.Headers["webversion"] = c.cfg.WebVersion
 	res, err := c.client.Do(u, options, http.MethodPost)
 	fmt.Println("==================check start======================== ")
 	if err != nil {

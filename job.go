@@ -33,6 +33,8 @@ type Config struct {
 	MaxDelay      int    `yaml:"max_delay"`     // 最大延迟（分钟）
 	TimeOut       int    `yaml:"time_out"`      // api请求的超时时间(秒）
 	DbPath        string `yaml:"db_path"`       // 数据库存储位置
+	Version       string `yaml:"version"`       // 系统版本号
+	WebVersion    string `yaml:"web_version"`   // web版本号
 }
 
 const (

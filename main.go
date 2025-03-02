@@ -25,6 +25,8 @@ func defaultCfg() *Config {
 		MinDelay:      0, // 默认最小延迟为0分钟
 		MaxDelay:      0, // 默认最大延迟为30分钟
 		DbPath:        "/data/cookie.db",
+		Version:       "1.1.2",
+		WebVersion:    "1120",
 	}
 }
 
@@ -38,6 +40,12 @@ func main() {
 	}
 	if os.Getenv("TOTPSECRET") != "" {
 		cfg.TotpSecret = os.Getenv("TOTPSECRET")
+	}
+	if os.Getenv("VERSION") != "" {
+		cfg.Version = os.Getenv("VERSION")
+	}
+	if os.Getenv("WEB_VERSION") != "" {
+		cfg.WebVersion = os.Getenv("WEB_VERSION")
 	}
 	if os.Getenv("PROXY") != "" {
 		cfg.Proxy = os.Getenv("PROXY")
@@ -102,6 +110,11 @@ func main() {
 	job, err := NewJobserver(cfg)
 	if err != nil {
 		panic(err)
+	}
+	// 本地调试直接run
+	if os.Getenv("LOCAL_TEST_RUN") == "true" {
+		job.checkToken()
+		return
 	}
 	job.Loop()
 

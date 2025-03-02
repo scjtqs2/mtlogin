@@ -31,6 +31,8 @@
 | MINDELAY      | 定时任务执行随机延迟，最小延迟（分钟）。默认值0                                       |
 | MAXDELAY      | 定时任务执行随机延迟，最大延迟（分钟）。默认值0                                       |
 | COOKIE_MODE   | cookie更新模式，"normal"(默认）,连续失败6次才删。"strict"，每次失败都会删掉cookie尝试重新登录 |
+| VERSION       | http_header里面的version版本号，eg 1.1.2                              |
+| WEB_VERSION   | http_header里面的webversion版本号, eg 1120                           |
 
 ## docker
 
