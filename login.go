@@ -103,7 +103,7 @@ func (c *Client) login(username, password, totpSecret string) error {
 		options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
 		options.Headers["version"] = c.cfg.Version
 		options.Headers["webversion"] = c.cfg.WebVersion
-		options.Headers["did"] = didstr
+		options.Headers["Did"] = didstr
 		fmt.Println("==================login start======================== ")
 		defer fmt.Println("==================login end========================")
 		// res, err := client.Do(options)
@@ -123,15 +123,24 @@ func (c *Client) login(username, password, totpSecret string) error {
 		resp := gjson.Parse(res.Body)
 		if resp.Get("message").String() == "SUCCESS" {
 			c.token = res.Headers["Authorization"]
-			c.did = res.Headers["Did"]
+			c.updateDid(res.Headers)
+			// c.did = res.Headers["Did"]
 			_ = c.db.Put([]byte(dbKey), []byte(c.token), nil)
-			_ = c.db.Put([]byte(didKey), []byte(c.did), nil)
+			// _ = c.db.Put([]byte(didKey), []byte(c.did), nil)
 			return nil
 		} else {
 			return errors.New(resp.Get("message").String())
 		}
 	}
 	return nil
+}
+
+func (c *Client) updateDid(headers map[string]string) {
+	if headers["Did"] != "" {
+		c.did = headers["Did"]
+		log.Infof("updateDid did=%s", c.did)
+		_ = c.db.Put([]byte(didKey), []byte(c.did), nil)
+	}
 }
 
 // check 校验auth是否有效，有效的话再进行签到更新
@@ -172,9 +181,10 @@ func (c *Client) check() error {
 	options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
 	options.Headers["version"] = c.cfg.Version
 	options.Headers["webversion"] = c.cfg.WebVersion
-	options.Headers["did"] = c.did
+	options.Headers["Did"] = c.did
 	// 调用之前请求一下funcState
-	c.funcState(options)
+	c.funcState(&options)
+	options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
 	res, err := c.client.Do(u, options, http.MethodPost)
 	fmt.Println("==================check start======================== ")
 	if err != nil {
@@ -192,12 +202,13 @@ func (c *Client) check() error {
 	fmt.Printf("Cookies %+v \r\n", res.Cookies)
 	fmt.Println("==================check end======================== ")
 	fmt.Println("token:", c.token)
-	fmt.Println("did:", c.did)
+	fmt.Println("Did:", c.did)
 	// 使用 gjson 解析 body
 	user_info := gjson.Parse(res.Body)
 	if user_info.Get("message").String() == "SUCCESS" {
 		fmt.Printf("用户信息获取成功\r\n")
-
+		c.updateDid(res.Headers)
+		options.Headers["Did"] = c.did
 		// 提取 uploaded, downloaded, bonus
 		uploadedBitStr := user_info.Get("data.memberCount.uploaded").String()
 		downloadedBitStr := user_info.Get("data.memberCount.downloaded").String()
@@ -236,9 +247,10 @@ func (c *Client) check() error {
 		// 	return errors.New(fmt.Sprintf("cookie已过期 status=%d;body=%s", pong.Status, pong.Body))
 		// }
 		// fmt.Println("==================ping end======================== ")
-		c.funcState(options)
+		c.funcState(&options)
 		// 更新最后访问时间
 		uu := fmt.Sprintf("https://%s/api/member/updateLastBrowse", c.cfg.ApiHost)
+		options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
 		res, err = c.client.Do(uu, options, http.MethodPost)
 		// options, _ = http.NewRequest(http.MethodPost, uu, strings.NewReader(""))
 		// options.Header.Add("User-Agent", c.ua)
@@ -261,6 +273,8 @@ func (c *Client) check() error {
 
 		resp := gjson.Parse(res.Body)
 		if resp.Get("message").String() == "SUCCESS" {
+			c.updateDid(res.Headers)
+			options.Headers["Did"] = c.did
 			fmt.Printf("更新最后访问时间成功\r\n")
 			return nil
 		}
@@ -270,13 +284,16 @@ func (c *Client) check() error {
 }
 
 // funcState 调用 profile之前需要调用一次
-func (c *Client) funcState(options cycletls.Options) error {
+func (c *Client) funcState(options *cycletls.Options) error {
 	u := fmt.Sprintf("https://%s/api/member/profile", c.cfg.ApiHost)
-	res, err := c.client.Do(u, options, http.MethodPost)
+	options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
+	res, err := c.client.Do(u, *options, http.MethodPost)
 	if err != nil {
 		return err
 	}
 	g := gjson.Parse(res.Body)
+	c.updateDid(res.Headers)
+	options.Headers["Did"] = c.did
 	fmt.Printf("body %s \r\n", g.String())
 	return nil
 }
