@@ -49,7 +49,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=edge
-            type=${{ steps.branch-names.outputs.current_branch }}
+            type=ref,event=branch
             type=sha,event=branch
             type=ref,event=tag
 
