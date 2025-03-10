@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - dev
 #  pull_request:
 #    branches:
 #      - master
@@ -22,6 +23,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: 获取分支名称
+        id: branch-names
+        uses: tj-actions/branch-names@v8
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -45,6 +49,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=edge
+            type=${{ steps.branch-names.outputs.current_branch }}
             type=sha,event=branch
             type=ref,event=tag
 
