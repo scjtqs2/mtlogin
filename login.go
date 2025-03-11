@@ -278,7 +278,13 @@ func (c *Client) check() error {
 			fmt.Printf("更新最后访问时间成功\r\n")
 			return nil
 		}
+		if resp.Get("code").Int() == http.StatusUnauthorized {
+			c.cleanToken()
+		}
 		return errors.New("连接成功，但更新状态失败")
+	}
+	if user_info.Get("code").Int() == http.StatusUnauthorized {
+		c.cleanToken()
 	}
 	return errors.New("cookie已过期")
 }
@@ -315,6 +321,11 @@ func (c *Client) newClient() *http.Client {
 		Timeout: time.Duration(c.cfg.TimeOut) * time.Second,
 	}
 	return cli
+}
+
+// cleanCookie 清理token
+func (c *Client) cleanToken() {
+	_ = c.db.Delete([]byte(dbKey), nil)
 }
 
 // SecureRandomString 生成密码学安全的随机字符串（小写字母+数字）
