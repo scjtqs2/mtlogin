@@ -278,9 +278,6 @@ func (c *Client) check() error {
 			fmt.Printf("更新最后访问时间成功\r\n")
 			return nil
 		}
-		if resp.Get("code").Int() == http.StatusUnauthorized {
-			c.cleanToken()
-		}
 		return errors.New("连接成功，但更新状态失败")
 	}
 	if user_info.Get("code").Int() == http.StatusUnauthorized {
