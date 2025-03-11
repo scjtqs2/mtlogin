@@ -19,12 +19,18 @@ import (
 	"time"
 )
 
+var (
+	// 需要重新登录
+	authFaildErr = errors.New("Full authentication is required to access this resource")
+)
+
 // Client http的请求处理合类
 type Client struct {
 	db         *leveldb.DB
 	ua         string
 	token      string
 	did        string
+	visitorid  string
 	lock       sync.Mutex
 	proxy      *url.URL
 	MTeamAuth  string
@@ -57,6 +63,13 @@ func (c *Client) login(username, password, totpSecret string) error {
 	}
 	ck, _ := c.db.Get([]byte(dbKey), nil)
 	did, _ := c.db.Get([]byte(didKey), nil)
+	visitorid, _ := c.db.Get([]byte(visitoridKey), nil)
+	if visitorid == nil {
+		c.visitorid, _ = SecureRandomString(32)
+		_ = c.db.Put([]byte(visitoridKey), []byte(c.visitorid), nil)
+	} else {
+		c.visitorid = string(visitorid)
+	}
 	var needLogin bool
 	if ck != nil && string(ck) != "" && string(did) != "" {
 		c.token = string(ck)
@@ -104,6 +117,7 @@ func (c *Client) login(username, password, totpSecret string) error {
 		options.Headers["version"] = c.cfg.Version
 		options.Headers["webversion"] = c.cfg.WebVersion
 		options.Headers["Did"] = didstr
+		options.Headers["visitorid"] = c.visitorid
 		fmt.Println("==================login start======================== ")
 		defer fmt.Println("==================login end========================")
 		// res, err := client.Do(options)
@@ -135,12 +149,20 @@ func (c *Client) login(username, password, totpSecret string) error {
 	return nil
 }
 
+// updateDid 更新did
 func (c *Client) updateDid(headers map[string]string) {
 	if headers["Did"] != "" {
 		c.did = headers["Did"]
-		log.Infof("updateDid did=%s", c.did)
+		fmt.Printf("updateDid did=%s \r\n", c.did)
 		_ = c.db.Put([]byte(didKey), []byte(c.did), nil)
 	}
+	if headers["did"] != "" {
+		c.did = headers["did"]
+		fmt.Printf("updateDid did=%s \r\n", c.did)
+		_ = c.db.Put([]byte(didKey), []byte(c.did), nil)
+	}
+	// fmt.Printf("visitorid =%s \r\n", headers["visitorid"])
+	// fmt.Printf("Visitorid =%s \r\n", headers["Visitorid"])
 }
 
 // check 校验auth是否有效，有效的话再进行签到更新
@@ -182,6 +204,7 @@ func (c *Client) check() error {
 	options.Headers["version"] = c.cfg.Version
 	options.Headers["webversion"] = c.cfg.WebVersion
 	options.Headers["Did"] = c.did
+	options.Headers["visitorid"] = c.visitorid
 	// 调用之前请求一下funcState
 	c.funcState(&options)
 	options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
@@ -250,6 +273,7 @@ func (c *Client) check() error {
 		c.funcState(&options)
 		// 更新最后访问时间
 		uu := fmt.Sprintf("https://%s/api/member/updateLastBrowse", c.cfg.ApiHost)
+		// time.Sleep(time.Second * 10)
 		options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
 		res, err = c.client.Do(uu, options, http.MethodPost)
 		// options, _ = http.NewRequest(http.MethodPost, uu, strings.NewReader(""))
@@ -280,21 +304,35 @@ func (c *Client) check() error {
 		}
 		return errors.New("连接成功，但更新状态失败")
 	}
+	if user_info.Get("code").Int() == http.StatusUnauthorized {
+		c.cleanToken()
+		return authFaildErr
+	}
 	return errors.New("cookie已过期")
 }
 
 // funcState 调用 profile之前需要调用一次
 func (c *Client) funcState(options *cycletls.Options) error {
-	u := fmt.Sprintf("https://%s/api/member/profile", c.cfg.ApiHost)
-	options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
-	res, err := c.client.Do(u, *options, http.MethodPost)
-	if err != nil {
-		return err
+	urls := []string{
+		fmt.Sprintf("https://%s/api/system/unix", c.cfg.ApiHost),
+		fmt.Sprintf("https://%s/ping", c.cfg.ApiHost),
+		fmt.Sprintf("https://%s/api/laboratory/funcState", c.cfg.ApiHost),
+		fmt.Sprintf("https://%s/api/fun/first", c.cfg.ApiHost),
+		fmt.Sprintf("https://%s/api/system/state", c.cfg.ApiHost),
+		fmt.Sprintf("https://%s/api/links/view", c.cfg.ApiHost),
+		fmt.Sprintf("https://%s/api/msg/statistic", c.cfg.ApiHost),
 	}
-	g := gjson.Parse(res.Body)
-	c.updateDid(res.Headers)
-	options.Headers["Did"] = c.did
-	fmt.Printf("body %s \r\n", g.String())
+	for _, u := range urls {
+		options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
+		res, err := c.client.Do(u, *options, http.MethodPost)
+		if err != nil {
+			return err
+		}
+		g := gjson.Parse(res.Body)
+		c.updateDid(res.Headers)
+		options.Headers["Did"] = c.did
+		fmt.Printf("url=%s ,rsp body %s \r\n", u, g.String())
+	}
 	return nil
 }
 
@@ -315,6 +353,11 @@ func (c *Client) newClient() *http.Client {
 		Timeout: time.Duration(c.cfg.TimeOut) * time.Second,
 	}
 	return cli
+}
+
+// cleanCookie 清理token
+func (c *Client) cleanToken() {
+	_ = c.db.Delete([]byte(dbKey), nil)
 }
 
 // SecureRandomString 生成密码学安全的随机字符串（小写字母+数字）

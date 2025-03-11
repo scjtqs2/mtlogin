@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -101,27 +102,35 @@ func (j *Jobserver) checkToken() {
 			_ = j.client.db.Delete([]byte(dbKey), nil) // 连续失败6次清理cookie
 		}
 	}()
-	// 如果 MTeamAuth 为空，则尝试登录
-	if j.cfg.MTeamAuth == "" && j.cfg.Did == "" {
-		err := j.client.login(j.cfg.UserName, j.cfg.Password, j.cfg.TotpSecret)
+	for i := 1; i <= 3; i++ {
+		// 如果 MTeamAuth 为空，则尝试登录
+		if j.cfg.MTeamAuth == "" && j.cfg.Did == "" {
+			err := j.client.login(j.cfg.UserName, j.cfg.Password, j.cfg.TotpSecret)
+			if err != nil {
+				log.Errorf("m-team login failed err=%v", err)
+				j.sendErrorNotification(err)
+				return
+			}
+		}
+
+		// 检查 token
+		err := j.client.check()
 		if err != nil {
-			log.Errorf("m-team login failed err=%v", err)
+			j.failedCount++
+			if j.cookieMode == CookieModeStrict {
+				_ = j.client.db.Delete([]byte(dbKey), nil) // 直接清理cookie
+			}
+			log.Errorf("m-team check token failed err=%v", err)
+			if errors.Is(err, authFaildErr) && i < 3 {
+				log.Errorf("token 401了，需要重新登录，重试中 try=%d", i)
+				continue
+			}
 			j.sendErrorNotification(err)
 			return
 		}
+		break
 	}
 
-	// 检查 token
-	err := j.client.check()
-	if err != nil {
-		j.failedCount++
-		if j.cookieMode == CookieModeStrict {
-			_ = j.client.db.Delete([]byte(dbKey), nil) // 直接清理cookie
-		}
-		log.Errorf("m-team check token failed err=%v", err)
-		j.sendErrorNotification(err)
-		return
-	}
 	j.failedCount = 0
 	// 成功时发送通知
 	j.sendSuccessNotification()
