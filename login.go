@@ -315,7 +315,8 @@ func (c *Client) check() error {
 func (c *Client) funcState(options *cycletls.Options) error {
 	urls := []string{
 		fmt.Sprintf("https://%s/api/system/unix", c.cfg.ApiHost),
-		fmt.Sprintf("https://%s/api/member/profile", c.cfg.ApiHost),
+		fmt.Sprintf("https://%s/ping", c.cfg.ApiHost),
+		fmt.Sprintf("https://%s/api/laboratory/funcState", c.cfg.ApiHost),
 		fmt.Sprintf("https://%s/api/fun/first", c.cfg.ApiHost),
 		fmt.Sprintf("https://%s/api/system/state", c.cfg.ApiHost),
 		fmt.Sprintf("https://%s/api/links/view", c.cfg.ApiHost),
