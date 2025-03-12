@@ -313,18 +313,18 @@ func (c *Client) check() error {
 
 // funcState 调用 profile之前需要调用一次
 func (c *Client) funcState(options *cycletls.Options) error {
-	urls := []string{
-		fmt.Sprintf("https://%s/api/system/unix", c.cfg.ApiHost),
-		fmt.Sprintf("https://%s/ping", c.cfg.ApiHost),
-		fmt.Sprintf("https://%s/api/laboratory/funcState", c.cfg.ApiHost),
-		fmt.Sprintf("https://%s/api/fun/first", c.cfg.ApiHost),
-		fmt.Sprintf("https://%s/api/system/state", c.cfg.ApiHost),
-		fmt.Sprintf("https://%s/api/links/view", c.cfg.ApiHost),
-		fmt.Sprintf("https://%s/api/msg/statistic", c.cfg.ApiHost),
+	urls := map[string]string{
+		fmt.Sprintf("https://%s/api/system/unix", c.cfg.ApiHost):          http.MethodGet,
+		fmt.Sprintf("https://%s/ping", c.cfg.ApiHost):                     http.MethodGet,
+		fmt.Sprintf("https://%s/api/laboratory/funcState", c.cfg.ApiHost): http.MethodPost,
+		fmt.Sprintf("https://%s/api/fun/first", c.cfg.ApiHost):            http.MethodPost,
+		fmt.Sprintf("https://%s/api/system/state", c.cfg.ApiHost):         http.MethodPost,
+		fmt.Sprintf("https://%s/api/links/view", c.cfg.ApiHost):           http.MethodPost,
+		fmt.Sprintf("https://%s/api/msg/statistic", c.cfg.ApiHost):        http.MethodPost,
 	}
-	for _, u := range urls {
+	for u, p := range urls {
 		options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
-		res, err := c.client.Do(u, *options, http.MethodPost)
+		res, err := c.client.Do(u, *options, p)
 		if err != nil {
 			return err
 		}
