@@ -1,7 +1,10 @@
 package main
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha1"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/Danny-Dasilva/CycleTLS/cycletls"
@@ -57,7 +60,7 @@ func NewClient(dbPath, proxy string, cfg *Config) (*Client, error) {
 }
 
 // login 通过账号密码+otp秘钥登录来获取auth
-func (c *Client) login(username, password, totpSecret string) error {
+func (c *Client) login(username, password, totpSecret string, isopt bool) error {
 	if c.ua == "" {
 		c.ua = c.cfg.Ua
 	}
@@ -79,17 +82,23 @@ func (c *Client) login(username, password, totpSecret string) error {
 	}
 	if needLogin {
 		u := fmt.Sprintf("https://%s/api/login", c.cfg.ApiHost)
-		// 二次验证
-		tk, err := dgoogauth.GetTOTPToken(totpSecret)
-		if err != nil {
-			return err
-		}
-		log.Debugf("token: %s", tk)
+		t := time.Now().UnixMilli()
+		_sgin := sgin("POST", "/api/login", t)
 		body := url.Values{}
+		if isopt {
+			// 二次验证
+			tk, err := dgoogauth.GetTOTPToken(totpSecret)
+			if err != nil {
+				return err
+			}
+			log.Debugf("token: %s", tk)
+			body.Add("otpCode", tk)
+		}
 		body.Add("username", username)
 		body.Add("password", password)
-		body.Add("otpCode", tk)
 		body.Add("turnstile", "")
+		body.Add("_timestamp", strconv.FormatInt(t, 10))
+		body.Add("_sgin", _sgin)
 		// options, _ := http.NewRequest(http.MethodPost, u, strings.NewReader(body.Encode()))
 		// client := c.newClient()
 		// options.Header.Add("User-Agent", c.ua)
@@ -142,6 +151,9 @@ func (c *Client) login(username, password, totpSecret string) error {
 			_ = c.db.Put([]byte(dbKey), []byte(c.token), nil)
 			// _ = c.db.Put([]byte(didKey), []byte(c.did), nil)
 			return nil
+		} else if resp.Get("code").Int() == 1001 {
+			// 需要二次认证
+			return c.login(username, password, totpSecret, true)
 		} else {
 			return errors.New(resp.Get("message").String())
 		}
@@ -184,9 +196,14 @@ func (c *Client) check() error {
 	// options.Header.Add("Authorization", fmt.Sprintf("%s", c.token))
 	// options.Header.Add("Ts", strconv.FormatInt(time.Now().Unix(), 10))
 	// res, err := client.Do(options)
+	body := url.Values{}
+	t := time.Now().UnixMilli()
+	body.Add("_timestamp", strconv.FormatInt(t, 10))
+	_sgin := sgin("POST", "/api/member/profile", t)
+	body.Add("_sgin", _sgin)
 	options := cycletls.Options{
 		Headers:         make(map[string]string),
-		Body:            "",
+		Body:            body.Encode(),
 		Timeout:         c.cfg.TimeOut,
 		DisableRedirect: true,
 		UserAgent:       c.ua,
@@ -208,6 +225,14 @@ func (c *Client) check() error {
 	// 调用之前请求一下funcState
 	c.funcState(&options)
 	options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
+	// 更新签名
+	body = url.Values{}
+	t = time.Now().UnixMilli()
+	body.Add("_timestamp", strconv.FormatInt(t, 10))
+	_sgin = sgin("POST", "/api/member/profile", t)
+	body.Add("_sgin", _sgin)
+	options.Body = body.Encode()
+
 	res, err := c.client.Do(u, options, http.MethodPost)
 	fmt.Println("==================check start======================== ")
 	if err != nil {
@@ -275,6 +300,14 @@ func (c *Client) check() error {
 		uu := fmt.Sprintf("https://%s/api/member/updateLastBrowse", c.cfg.ApiHost)
 		// time.Sleep(time.Second * 10)
 		options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
+		// 更新签名
+		body = url.Values{}
+		t = time.Now().UnixMilli()
+		body.Add("_timestamp", strconv.FormatInt(t, 10))
+		_sgin = sgin("POST", "/api/member/updateLastBrowse", t)
+		body.Add("_sgin", _sgin)
+		options.Body = body.Encode()
+
 		res, err = c.client.Do(uu, options, http.MethodPost)
 		// options, _ = http.NewRequest(http.MethodPost, uu, strings.NewReader(""))
 		// options.Header.Add("User-Agent", c.ua)
@@ -324,6 +357,13 @@ func (c *Client) funcState(options *cycletls.Options) error {
 	}
 	for u, p := range urls {
 		options.Headers["Ts"] = strconv.FormatInt(time.Now().Unix(), 10)
+		body := url.Values{}
+		t := time.Now().UnixMilli()
+		body.Add("_timestamp", strconv.FormatInt(t, 10))
+		uu, _ := url.Parse(u)
+		_sgin := sgin(p, uu.Path, t)
+		body.Add("_sgin", _sgin)
+		options.Body = body.Encode()
 		res, err := c.client.Do(u, *options, p)
 		if err != nil {
 			return err
@@ -422,4 +462,19 @@ func SecureRandomString(length int) (string, error) {
 	}
 
 	return string(result), nil
+}
+
+// ComputeHmacSha1 hmacsha1 算法
+func ComputeHmacSha1(message string, secret string) string {
+	key := []byte(secret)
+	h := hmac.New(sha1.New, key)
+	h.Write([]byte(message))
+	return base64.StdEncoding.EncodeToString(h.Sum(nil))
+}
+
+// 登录签名计算，使用了13为的时间戳
+func sgin(method string, path string, t int64) string {
+	// 查看main.xxxxxx.js 文件的_sgin生成得到。method+apiPath+时间戳进行hmacsha1算法。
+	// return ComputeHmacSha1(fmt.Sprintf("POST&/api/login&%d", t), "HLkPcWmycL57mfJt")
+	return ComputeHmacSha1(fmt.Sprintf("%s&%s&%d", method, path, t), "HLkPcWmycL57mfJt")
 }
