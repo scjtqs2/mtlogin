@@ -105,7 +105,7 @@ func (j *Jobserver) checkToken() {
 	for i := 1; i <= 3; i++ {
 		// 如果 MTeamAuth 为空，则尝试登录
 		if j.cfg.MTeamAuth == "" && j.cfg.Did == "" {
-			err := j.client.login(j.cfg.UserName, j.cfg.Password, j.cfg.TotpSecret)
+			err := j.client.login(j.cfg.UserName, j.cfg.Password, j.cfg.TotpSecret, false)
 			if err != nil {
 				log.Errorf("m-team login failed err=%v", err)
 				j.sendErrorNotification(err)

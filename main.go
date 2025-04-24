@@ -28,8 +28,8 @@ func defaultCfg() *Config {
 		MinDelay:      0, // 默认最小延迟为0分钟
 		MaxDelay:      0, // 默认最大延迟为30分钟
 		DbPath:        "/data/cookie.db",
-		Version:       "1.1.2",
-		WebVersion:    "1120",
+		Version:       "1.1.4",
+		WebVersion:    "1140",
 		Did:           "",
 	}
 }
