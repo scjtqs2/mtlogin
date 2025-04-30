@@ -30,6 +30,7 @@ type Config struct {
 	WxCorpID      string `yaml:"WxCorpID"`      // 企业 ID
 	WxAgentSecret string `yaml:"WxAgentSecret"` // 应用密钥
 	WxAgentID     int    `yaml:"WxAgentID"`     // 应用 ID
+	WxUserId      string `yaml:"WxUserId"`      // 企业微信用户ID，多个用户用|分隔，为空则发送给所有用户
 	MinDelay      int    `yaml:"min_delay"`     // 最小延迟（分钟）
 	MaxDelay      int    `yaml:"max_delay"`     // 最大延迟（分钟）
 	TimeOut       int    `yaml:"time_out"`      // api请求的超时时间(秒）
@@ -167,7 +168,7 @@ func (j *Jobserver) sendSuccessNotification() {
 // sendWeixinMessage method to push message via WeChat
 func (j *Jobserver) sendWeixinMessage(message string) {
 	if j.cfg.WxCorpID != "" && j.cfg.WxAgentSecret != "" {
-		err := weixin.SendMessage(j.cfg.WxCorpID, j.cfg.WxAgentSecret, message, j.cfg.WxAgentID)
+		err := weixin.SendMessage(j.cfg.WxCorpID, j.cfg.WxAgentSecret, message, j.cfg.WxAgentID, j.cfg.WxUserId)
 		if err != nil {
 			log.Errorf("企业微信推送失败: %v", err)
 		}

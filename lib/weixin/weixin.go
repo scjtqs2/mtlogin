@@ -50,18 +50,15 @@ type Message struct {
 }
 
 // Function to send message
-// Function to send message
-func SendMessage(corpID string, agentSecret string, content string, agentID int) error {
+func SendMessage(corpID string, agentSecret string, content string, agentID int, wxUserId string) error {
 	token, err := GetAccessToken(corpID, agentSecret)
 	if err != nil {
 		return err
 	}
 
-	// Prepare the message payload to send to all users, parties, and tags
+	// Prepare the message payload
 	messagePayload := map[string]interface{}{
-		"touser":  "@all", // 发送给所有用户
-		"toparty": "@all", // 发送给所有部门
-		"totag":   "@all", // 发送给所有标签
+		"touser":  wxUserId, // 使用传入的 wxUserId，为空时自动发送给所有用户
 		"msgtype": "text",
 		"text":    map[string]string{"content": content},
 		"agentid": agentID,
