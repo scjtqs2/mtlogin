@@ -28,6 +28,7 @@
 | WXCORPID      | 企业微信推送通道用。企业ID                                                 |
 | WXAGENTSECRET | 企业微信推送通道用。应用秘钥                                                 |
 | WXAGENTID     | 企业微信推送通道用。应用ID                                                 |
+| WXUSERID      | 企业微信推送通道用。指定接收消息的成员ID，多个接收者用\|分隔，最多支持1000个。为空则发送给所有成员         |
 | MINDELAY      | 定时任务执行随机延迟，最小延迟（分钟）。默认值0                                       |
 | MAXDELAY      | 定时任务执行随机延迟，最大延迟（分钟）。默认值0                                       |
 | COOKIE_MODE   | cookie更新模式，"normal"(默认）,连续失败6次才删。"strict"，每次失败都会删掉cookie尝试重新登录 |
