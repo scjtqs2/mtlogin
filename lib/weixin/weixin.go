@@ -58,7 +58,7 @@ func SendMessage(corpID string, agentSecret string, content string, agentID int,
 
 	// Prepare the message payload
 	messagePayload := map[string]interface{}{
-		"touser":  wxUserId, // 直接使用传入的 wxUserId，为空时自动发送给所有用户
+		"touser":  wxUserId, // 直接使用传入的 wxUserId，默认为@all时自动发送给所有用户
 		"msgtype": "text",
 		"text":    map[string]string{"content": content},
 		"agentid": agentID,

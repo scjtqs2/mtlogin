@@ -25,7 +25,7 @@ func defaultCfg() *Config {
 		WxCorpID:      "",
 		WxAgentSecret: "",
 		WxAgentID:     0,
-		WxUserId:      "@all", // 默认为空，表示发送给所有用户
+		WxUserId:      "@all", // 默认为@all，表示发送给所有用户
 		MinDelay:      0,  // 默认最小延迟为0分钟
 		MaxDelay:      0,  // 默认最大延迟为30分钟
 		DbPath:        "/data/cookie.db",
