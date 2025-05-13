@@ -25,8 +25,9 @@ func defaultCfg() *Config {
 		WxCorpID:      "",
 		WxAgentSecret: "",
 		WxAgentID:     0,
-		MinDelay:      0, // 默认最小延迟为0分钟
-		MaxDelay:      0, // 默认最大延迟为30分钟
+		WxUserId:      "@all", // 默认为空，表示发送给所有用户
+		MinDelay:      0,  // 默认最小延迟为0分钟
+		MaxDelay:      0,  // 默认最大延迟为30分钟
 		DbPath:        "/data/cookie.db",
 		Version:       "1.1.4",
 		WebVersion:    "1140",
@@ -97,6 +98,9 @@ func main() {
 			log.Fatalf("无法转换 AgentID 环境变量为整数: %v", err)
 		}
 		cfg.WxAgentID = WxAgentID
+	}
+	if os.Getenv("WXUSERID") != "" {
+		cfg.WxUserId = os.Getenv("WXUSERID")
 	}
 	if os.Getenv("MINDELAY") != "" {
 		// 从环境变量读取 AgentID 字符串，并转换为 int
