@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/scjtqs2/mtlogin/lib/dingtalkrobot"
 	"math/rand"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/martian/log"
@@ -16,28 +18,31 @@ import (
 )
 
 type Config struct {
-	UserName      string `yaml:"username"`    // m-team账号
-	Password      string `yaml:"password"`    // m-team密码
-	TotpSecret    string `yaml:"totp_secret"` // Google 二次验证的秘钥
-	Proxy         string `yaml:"proxy"`       // 代理服务 eg: http://192.168.50.21:7890
-	Crontab       string `yaml:"crontab"`     // 定时规则
-	Qqpush        string `yaml:"qqpush"`
-	QqpushToken   string `yaml:"qqpush_token"`
-	MTeamAuth     string `yaml:"m_team_auth"`   // 直接提供登录的认证
-	Ua            string `yaml:"ua"`            // auth对应的user-agent
-	ApiHost       string `yaml:"api_host"`      // api的host地址。eg:"api.m-team.io"
-	Referer       string `yaml:"referer"`       // referer地址
-	WxCorpID      string `yaml:"WxCorpID"`      // 企业 ID
-	WxAgentSecret string `yaml:"WxAgentSecret"` // 应用密钥
-	WxAgentID     int    `yaml:"WxAgentID"`     // 应用 ID
-	WxUserId      string `yaml:"WxUserId"`      // 企业微信用户ID，多个用户用|分隔，为空则发送给所有用户
-	MinDelay      int    `yaml:"min_delay"`     // 最小延迟（分钟）
-	MaxDelay      int    `yaml:"max_delay"`     // 最大延迟（分钟）
-	TimeOut       int    `yaml:"time_out"`      // api请求的超时时间(秒）
-	DbPath        string `yaml:"db_path"`       // 数据库存储位置
-	Version       string `yaml:"version"`       // 系统版本号
-	WebVersion    string `yaml:"web_version"`   // web版本号
-	Did           string `yaml:"did"`
+	UserName                     string `yaml:"username"`    // m-team账号
+	Password                     string `yaml:"password"`    // m-team密码
+	TotpSecret                   string `yaml:"totp_secret"` // Google 二次验证的秘钥
+	Proxy                        string `yaml:"proxy"`       // 代理服务 eg: http://192.168.50.21:7890
+	Crontab                      string `yaml:"crontab"`     // 定时规则
+	Qqpush                       string `yaml:"qqpush"`
+	QqpushToken                  string `yaml:"qqpush_token"`
+	MTeamAuth                    string `yaml:"m_team_auth"`   // 直接提供登录的认证
+	Ua                           string `yaml:"ua"`            // auth对应的user-agent
+	ApiHost                      string `yaml:"api_host"`      // api的host地址。eg:"api.m-team.io"
+	Referer                      string `yaml:"referer"`       // referer地址
+	WxCorpID                     string `yaml:"WxCorpID"`      // 企业 ID
+	WxAgentSecret                string `yaml:"WxAgentSecret"` // 应用密钥
+	WxAgentID                    int    `yaml:"WxAgentID"`     // 应用 ID
+	WxUserId                     string `yaml:"WxUserId"`      // 企业微信用户ID，多个用户用|分隔，为空则发送给所有用户
+	MinDelay                     int    `yaml:"min_delay"`     // 最小延迟（分钟）
+	MaxDelay                     int    `yaml:"max_delay"`     // 最大延迟（分钟）
+	TimeOut                      int    `yaml:"time_out"`      // api请求的超时时间(秒）
+	DbPath                       string `yaml:"db_path"`       // 数据库存储位置
+	Version                      string `yaml:"version"`       // 系统版本号
+	WebVersion                   string `yaml:"web_version"`   // web版本号
+	Did                          string `yaml:"did"`
+	DingTalkRobotWebHookUrlToken string `yaml:"ding_talk_robot_web_hook_url_token"` // 钉钉机器人推送地址的 access_token
+	DingTalkRobotSecret          string `yaml:"ding_talk_robot_secret"`             // 钉钉机器人的secret (安全设置“加签”方式)
+	DingTalkRobotAtMobiles       string `yaml:"ding_talk_robot_at_mobiles"`         // 钉钉机器人的推送手机号，多个用户用|分隔，为空则发送给所有用户
 }
 
 const (
@@ -144,6 +149,9 @@ func (j *Jobserver) sendErrorNotification(err error) {
 	if j.cfg.WxCorpID != "" {
 		j.sendWeixinMessage(fmt.Sprintf("m-team login failed err=%v", err))
 	}
+	if j.cfg.DingTalkRobotWebHookUrlToken != "" && j.cfg.DingTalkRobotSecret != "" {
+		j.sendDingTalkRobotMessage(fmt.Sprintf("m-team login failed err=%v", err))
+	}
 }
 
 func (j *Jobserver) sendSuccessNotification() {
@@ -163,6 +171,9 @@ func (j *Jobserver) sendSuccessNotification() {
 	if j.cfg.WxCorpID != "" {
 		j.sendWeixinMessage(message)
 	}
+	if j.cfg.DingTalkRobotWebHookUrlToken != "" && j.cfg.DingTalkRobotSecret != "" {
+		j.sendDingTalkRobotMessage(message)
+	}
 }
 
 // sendWeixinMessage method to push message via WeChat
@@ -174,6 +185,28 @@ func (j *Jobserver) sendWeixinMessage(message string) {
 		}
 	} else {
 		log.Errorf("缺少 CorpID 或 AgentSecret")
+	}
+}
+
+// sendDingTalkRobotMessage method to push message via DingTalk
+func (j *Jobserver) sendDingTalkRobotMessage(message string) {
+	if j.cfg.DingTalkRobotWebHookUrlToken != "" && j.cfg.DingTalkRobotSecret != "" {
+		dd := dingtalkrobot.NewDingTalkRobot(fmt.Sprintf("https://oapi.dingtalk.com/robot/send?access_token=%s", j.cfg.DingTalkRobotWebHookUrlToken), j.cfg.DingTalkRobotSecret)
+		var (
+			atMobiles []string
+			isAtAll   bool
+		)
+		if j.cfg.DingTalkRobotAtMobiles != "" {
+			atMobiles = strings.Split(j.cfg.DingTalkRobotAtMobiles, "|")
+		} else {
+			isAtAll = true
+		}
+		err := dd.SendTextMessage(message, atMobiles, isAtAll)
+		if err != nil {
+			log.Errorf("钉钉机器人推送失败: %v", err)
+		}
+	} else {
+		log.Errorf("缺失 钉钉机器人推送地址和\"加签\"")
 	}
 }
 

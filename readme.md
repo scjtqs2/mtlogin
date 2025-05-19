@@ -11,30 +11,33 @@
 
 ### env环境变量参数
 
-| Parameter     | Notes                                                         |
-|---------------|---------------------------------------------------------------|
-| USERNAME      | 用户名                                                           |
-| PASSWORD      | 账号密码                                                          |
-| TOTPSECRET    | google 二次认证的secret                                            |
-| PROXY         | 代理服务器地址。例如: `http://192.168.50.123:7890`                      |
-| CRONTAB       | 定时任务配置，例如: `2 */2 * * *`                                      |
-| QQPUSH        | 结果推送给的qq号                                                     |
-| QQPUSH_TOKEN  | 对应QQ号推送的token                                                 |
-| M_TEAM_AUTH   | 直接填写m-team的auth字段，自行用浏览器登录，然后抓取到认证信息                          |
-| UA            | M_TEAM_AUTH 对应的user-agent                                     |
-| API_HOST      | api的域名，如果和你的不一样，就换成你自己的。默认值为`api.m-team.io`                   |
-| TIME_OUT      | api访问的超时时间，单位秒。默认值为60                                         |
-| API_REFERER   | api的请求的referer值,如果和你的不一样，就换成你自己的。默认为`https://kp.m-team.cc/`   |
-| WXCORPID      | 企业微信推送通道用。企业ID                                                |
-| WXAGENTSECRET | 企业微信推送通道用。应用秘钥                                                |
-| WXAGENTID     | 企业微信推送通道用。应用ID                                                |
-| WXUSERID      | 企业微信推送通道用。指定接收消息的成员ID，多个接收者用\|分隔。为空则发送给所有成员         |
-| MINDELAY      | 定时任务执行随机延迟，最小延迟（分钟）。默认值0                                      |
-| MAXDELAY      | 定时任务执行随机延迟，最大延迟（分钟）。默认值0                                      |
-| COOKIE_MODE   | cookie更新模式，"normal"(默认）,连续失败6次才删。"strict"，每次失败都会删掉cookie尝试重新登录 |
-| VERSION       | http_header里面的version版本号，eg 1.1.2                             |
-| WEB_VERSION   | http_header里面的webversion版本号, eg 1120                          |
-| M_TEAM_DID    | http_header里面的did参数。和M_TEAM_AUTH绑定。仅在使用M_TEAM_AUTH的时候需要填      |
+| Parameter                     | Notes                                                                     |
+|-------------------------------|---------------------------------------------------------------------------|
+| USERNAME                      | 用户名                                                                       |
+| PASSWORD                      | 账号密码                                                                      |
+| TOTPSECRET                    | google 二次认证的secret                                                        |
+| PROXY                         | 代理服务器地址。例如: `http://192.168.50.123:7890`                                  |
+| CRONTAB                       | 定时任务配置，例如: `2 */2 * * *`                                                  |
+| QQPUSH                        | 结果推送给的qq号                                                                 |
+| QQPUSH_TOKEN                  | 对应QQ号推送的token                                                             |
+| M_TEAM_AUTH                   | 直接填写m-team的auth字段，自行用浏览器登录，然后抓取到认证信息                                      |
+| UA                            | M_TEAM_AUTH 对应的user-agent                                                 |
+| API_HOST                      | api的域名，如果和你的不一样，就换成你自己的。默认值为`api.m-team.io`                               |
+| TIME_OUT                      | api访问的超时时间，单位秒。默认值为60                                                     |
+| API_REFERER                   | api的请求的referer值,如果和你的不一样，就换成你自己的。默认为`https://kp.m-team.cc/`               |
+| WXCORPID                      | 企业微信推送通道用。企业ID                                                            |
+| WXAGENTSECRET                 | 企业微信推送通道用。应用秘钥                                                            |
+| WXAGENTID                     | 企业微信推送通道用。应用ID                                                            |
+| WXUSERID                      | 企业微信推送通道用。指定接收消息的成员ID，多个接收者用\|分隔。为空则发送给所有成员                               |
+| MINDELAY                      | 定时任务执行随机延迟，最小延迟（分钟）。默认值0                                                  |
+| MAXDELAY                      | 定时任务执行随机延迟，最大延迟（分钟）。默认值0                                                  |
+| COOKIE_MODE                   | cookie更新模式，"normal"(默认）,连续失败6次才删。"strict"，每次失败都会删掉cookie尝试重新登录            |
+| VERSION                       | http_header里面的version版本号，eg 1.1.2                                         |
+| WEB_VERSION                   | http_header里面的webversion版本号, eg 1120                                      |
+| M_TEAM_DID                    | http_header里面的did参数。和M_TEAM_AUTH绑定。仅在使用M_TEAM_AUTH的时候需要填                  |
+| DING_TALK_ROBOT_WEBHOOK_TOKEN | 钉钉机器人推送地址的access_token                                                    |
+| DING_TALK_ROBOT_SECRET        | 钉钉机器人“安全设置”里面的“加签”秘钥，目前仅适配“加签”的方式                                         |
+| DING_TALK_ROBOT_AT_MOBILES    | 钉钉机器人消息里面的艾特配置，填对方手机号。多个接受者用`\|`分隔，exg: `138xxxx1234\|137xxxx5678`。留空@all |
 
 ## docker
 

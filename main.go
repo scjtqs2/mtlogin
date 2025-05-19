@@ -26,8 +26,8 @@ func defaultCfg() *Config {
 		WxAgentSecret: "",
 		WxAgentID:     0,
 		WxUserId:      "@all", // 默认为空，表示发送给所有用户
-		MinDelay:      0,  // 默认最小延迟为0分钟
-		MaxDelay:      0,  // 默认最大延迟为30分钟
+		MinDelay:      0,      // 默认最小延迟为0分钟
+		MaxDelay:      0,      // 默认最大延迟为30分钟
 		DbPath:        "/data/cookie.db",
 		Version:       "1.1.4",
 		WebVersion:    "1140",
@@ -117,6 +117,16 @@ func main() {
 			log.Fatalf("无法转换 MaxDelay 环境变量为整数: %v", err)
 		}
 		cfg.MaxDelay = MaxDelay
+	}
+	// 钉钉机器人推送
+	if os.Getenv("DING_TALK_ROBOT_WEBHOOK_TOKEN") != "" {
+		cfg.DingTalkRobotWebHookUrlToken = os.Getenv("DING_TALK_ROBOT_WEBHOOK_TOKEN")
+	}
+	if os.Getenv("DING_TALK_ROBOT_SECRET") != "" {
+		cfg.DingTalkRobotSecret = os.Getenv("DING_TALK_ROBOT_SECRET")
+	}
+	if os.Getenv("DING_TALK_ROBOT_AT_MOBILES") != "" {
+		cfg.DingTalkRobotAtMobiles = os.Getenv("DING_TALK_ROBOT_AT_MOBILES")
 	}
 	job, err := NewJobserver(cfg)
 	if err != nil {
