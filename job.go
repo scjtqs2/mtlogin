@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/scjtqs2/mtlogin/lib/dingtalkrobot"
+	"github.com/scjtqs2/mtlogin/lib/tgbot"
 	"math/rand"
 	"net/http"
 	"os"
@@ -43,6 +44,9 @@ type Config struct {
 	DingTalkRobotWebHookUrlToken string `yaml:"ding_talk_robot_web_hook_url_token"` // 钉钉机器人推送地址的 access_token
 	DingTalkRobotSecret          string `yaml:"ding_talk_robot_secret"`             // 钉钉机器人的secret (安全设置“加签”方式)
 	DingTalkRobotAtMobiles       string `yaml:"ding_talk_robot_at_mobiles"`         // 钉钉机器人的推送手机号，多个用户用|分隔，为空则发送给所有用户
+	TgBotToken                   string `yaml:"tg_bot_token"`                       // telegram机器人token
+	TgBotChatId                  int64  `yaml:"tg_bot_chat_id"`                     // telegram机器人chat id
+	TgBotProxy                   string `yaml:"tg_bot_proxy"`                       // telegram机器人代理
 }
 
 const (
@@ -143,14 +147,18 @@ func (j *Jobserver) checkToken() {
 }
 
 func (j *Jobserver) sendErrorNotification(err error) {
+	message := fmt.Sprintf("m-team login failed err=%v", err)
 	if j.cfg.Qqpush != "" {
-		qqpush.Qqpush(fmt.Sprintf("m-team login failed err=%v", err), j.cfg.Qqpush, j.cfg.QqpushToken)
+		qqpush.Qqpush(message, j.cfg.Qqpush, j.cfg.QqpushToken)
 	}
 	if j.cfg.WxCorpID != "" {
-		j.sendWeixinMessage(fmt.Sprintf("m-team login failed err=%v", err))
+		j.sendWeixinMessage(message)
 	}
 	if j.cfg.DingTalkRobotWebHookUrlToken != "" && j.cfg.DingTalkRobotSecret != "" {
-		j.sendDingTalkRobotMessage(fmt.Sprintf("m-team login failed err=%v", err))
+		j.sendDingTalkRobotMessage(message)
+	}
+	if j.cfg.TgBotToken != "" && j.cfg.TgBotChatId > 0 {
+		j.sendTgBotMessage(message)
 	}
 }
 
@@ -173,6 +181,9 @@ func (j *Jobserver) sendSuccessNotification() {
 	}
 	if j.cfg.DingTalkRobotWebHookUrlToken != "" && j.cfg.DingTalkRobotSecret != "" {
 		j.sendDingTalkRobotMessage(message)
+	}
+	if j.cfg.TgBotToken != "" && j.cfg.TgBotChatId > 0 {
+		j.sendTgBotMessage(message)
 	}
 }
 
@@ -207,6 +218,18 @@ func (j *Jobserver) sendDingTalkRobotMessage(message string) {
 		}
 	} else {
 		log.Errorf("缺失 钉钉机器人推送地址和\"加签\"")
+	}
+}
+
+// sendTgBotMessage 给tg机器人发送消息
+func (j *Jobserver) sendTgBotMessage(message string) {
+	if j.cfg.TgBotToken != "" && j.cfg.TgBotChatId > 0 {
+		err := tgbot.SendTextMessage(j.cfg.TgBotToken, j.cfg.TgBotChatId, message, j.cfg.TgBotProxy)
+		if err != nil {
+			log.Errorf("tgbot推送失败: %v", err)
+		}
+	} else {
+		log.Errorf("缺失 tgbot推送token和chatid")
 	}
 }
 
