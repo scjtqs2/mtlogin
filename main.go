@@ -128,6 +128,16 @@ func main() {
 	if os.Getenv("DING_TALK_ROBOT_AT_MOBILES") != "" {
 		cfg.DingTalkRobotAtMobiles = os.Getenv("DING_TALK_ROBOT_AT_MOBILES")
 	}
+	// Telegram 机器人推送
+	if os.Getenv("TGBOT_TOKEN") != "" {
+		cfg.TgBotToken = os.Getenv("TGBOT_TOKEN")
+	}
+	if os.Getenv("TGBOT_CHAT_ID") != "" {
+		cfg.TgBotChatId, _ = strconv.ParseInt(os.Getenv("TGBOT_CHAT_ID"), 10, 64)
+	}
+	if os.Getenv("TGBOT_PROXY") != "" {
+		cfg.TgBotProxy = os.Getenv("TGBOT_PROXY")
+	}
 	job, err := NewJobserver(cfg)
 	if err != nil {
 		panic(err)
