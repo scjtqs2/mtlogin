@@ -6,7 +6,7 @@ import (
 
 type CloudScrapper struct {
 	client        cycletls.CycleTLS
-	respChan      chan cycletls.Response
+	respChan      chan []byte
 	defaultHeader map[string]string
 	ja3           string
 	userAgent     string
@@ -59,7 +59,7 @@ func (cs CloudScrapper) Post(url string, headers map[string]string, body string)
 	return cs.Do(url, options, "POST")
 }
 
-func (cs CloudScrapper) RespChan() chan cycletls.Response {
+func (cs CloudScrapper) RespChan() chan []byte {
 	return cs.respChan
 }
 
