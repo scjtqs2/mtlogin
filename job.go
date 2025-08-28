@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/scjtqs2/mtlogin/lib/dingtalkrobot"
+	"github.com/scjtqs2/mtlogin/lib/feishu"
 	"github.com/scjtqs2/mtlogin/lib/tgbot"
 	"math/rand"
 	"net/http"
@@ -47,6 +48,8 @@ type Config struct {
 	TgBotToken                   string `yaml:"tg_bot_token"`                       // telegram机器人token
 	TgBotChatId                  int64  `yaml:"tg_bot_chat_id"`                     // telegram机器人chat id
 	TgBotProxy                   string `yaml:"tg_bot_proxy"`                       // telegram机器人代理
+	FeishuWebHookURL             string `yaml:"feishu_web_hook_url"`                // 飞书机器人webhookURL地址
+	FeishuWebHookSecret          string `yaml:"feishu_web_hook_secret"`             // 飞书机器人的secret (安全设置)。不使用就留空。
 }
 
 const (
@@ -160,6 +163,9 @@ func (j *Jobserver) sendErrorNotification(err error) {
 	if j.cfg.TgBotToken != "" && j.cfg.TgBotChatId > 0 {
 		j.sendTgBotMessage(message)
 	}
+	if j.cfg.FeishuWebHookURL != "" {
+		j.sendFeishuMessage(message)
+	}
 }
 
 func (j *Jobserver) sendSuccessNotification() {
@@ -184,6 +190,9 @@ func (j *Jobserver) sendSuccessNotification() {
 	}
 	if j.cfg.TgBotToken != "" && j.cfg.TgBotChatId > 0 {
 		j.sendTgBotMessage(message)
+	}
+	if j.cfg.FeishuWebHookURL != "" {
+		j.sendFeishuMessage(message)
 	}
 }
 
@@ -230,6 +239,19 @@ func (j *Jobserver) sendTgBotMessage(message string) {
 		}
 	} else {
 		log.Errorf("缺失 tgbot推送token和chatid")
+	}
+}
+
+// sendFeishuMessage 给飞书机器人发送消息
+func (j *Jobserver) sendFeishuMessage(message string) {
+	if j.cfg.FeishuWebHookURL != "" {
+		feishuBot := feishu.NewFeishuBot(j.cfg.FeishuWebHookURL, j.cfg.FeishuWebHookSecret)
+		err := feishuBot.SendText(message)
+		if err != nil {
+			log.Errorf("feishu bot 推送失败: %v", err)
+		}
+	} else {
+		log.Errorf("确实了 feishu bot的webhookurl")
 	}
 }
 

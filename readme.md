@@ -41,6 +41,8 @@
 | TGBOT_TOKEN                   | Telegram机器人token，需要在[BotFather](https://t.me/BotFather)注册后获取。eg:`123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`                 |
 | TGBOT_CHAT_ID                 | Telegram机器人的聊天ID。去找你的 Bot 聊天一次，然后访问：`https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates`替换 <YOUR_TOKEN> 后查看响应数据里的 chat.id。 |
 | TGBOT_PROXY                   | Telegram机器人接口用到的代理。如果你是国外环境，留空不用填，国内环境填`http://192.168.50.111:7890`或者`socks5://192.168.50.111:1080`这种代理                     |
+| FEISHU_WEBHOOKURL             | 飞书机器人的WebhookURL。在飞书开放平台创建机器人后，会得到一个WebhookURL。 eg: "https://open.feishu.cn/open-apis/bot/v2/hook/your-webhook-token"                                                                        |
+| FEISHU_SECRET                 | 飞书机器人的Secret。在飞书开放平台创建机器人后，会得到一个Secret。 不使用留空。                                                                              |
 
 ## docker
 
