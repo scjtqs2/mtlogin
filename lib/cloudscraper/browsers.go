@@ -3,6 +3,7 @@ package cloudscraper
 import (
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"math/rand"
 	"time"
 )
@@ -10,11 +11,11 @@ import (
 type browserDescription struct {
 	UserAgents userAgents                   `json:"user_agents"`
 	Ja3        map[string]string            `json:"ja3"`
+	Ja4        map[string]string            `json:"ja4"`
 	Headers    map[string]map[string]string `json:"headers"`
 }
 
 type userAgents struct {
-	// os -> browser - [user-agents]
 	Desktop map[string]map[string][]string `json:"desktop"`
 	Mobile  map[string]map[string][]string `json:"mobile"`
 }
@@ -22,6 +23,7 @@ type userAgents struct {
 type BrowserConf struct {
 	UserAgent string
 	Ja3       string
+	Ja4       string
 	Headers   map[string]string
 }
 
@@ -29,40 +31,72 @@ type BrowserConf struct {
 var browsersJson string
 
 func readJsonFile() (browserDescription, error) {
-	// Open our jsonFile
 	var browsers browserDescription
 	err := json.Unmarshal([]byte(browsersJson), &browsers)
-	// defer the closing of our jsonFile so that we can parse it later on
 	return browsers, err
+}
+
+func randomPick[T any](arr []T) (T, error) {
+	if len(arr) == 0 {
+		var zero T
+		return zero, errors.New("empty slice")
+	}
+	return arr[rand.Intn(len(arr))], nil
 }
 
 func getUserAgents(mobile bool) (BrowserConf, error) {
 	rand.Seed(time.Now().UnixNano())
-	var userAgents map[string]map[string][]string
 	browsersDescription, err := readJsonFile()
 	if err != nil {
 		return BrowserConf{}, err
 	}
+
+	var userAgents map[string]map[string][]string
 	if mobile {
 		userAgents = browsersDescription.UserAgents.Mobile
 	} else {
 		userAgents = browsersDescription.UserAgents.Desktop
 	}
+
 	var osList []string
 	for k := range userAgents {
 		osList = append(osList, k)
 	}
-	rnd := rand.Intn(len(osList))
-	pickedOs := userAgents[osList[rnd]]
+	pickedOS, err := randomPick(osList)
+	if err != nil {
+		return BrowserConf{}, err
+	}
+
 	var browserList []string
-	for k := range pickedOs {
+	for k := range userAgents[pickedOS] {
 		browserList = append(browserList, k)
 	}
-	rnd = rand.Intn(len(browserList))
-	browserName := browserList[rnd]
-	pickedBrowser := pickedOs[browserName]
-	rnd = rand.Intn(len(pickedBrowser))
-	pickedUserAgent := pickedBrowser[rnd]
+	browserName, err := randomPick(browserList)
+	if err != nil {
+		return BrowserConf{}, err
+	}
+
+	pickedBrowser := userAgents[pickedOS][browserName]
+	ua, err := randomPick(pickedBrowser)
+	if err != nil {
+		return BrowserConf{}, err
+	}
+
 	ja3 := browsersDescription.Ja3[browserName]
-	return BrowserConf{UserAgent: pickedUserAgent, Ja3: ja3, Headers: browsersDescription.Headers[browserName]}, nil
+	ja4 := browsersDescription.Ja4[browserName]
+	headers := browsersDescription.Headers[browserName]
+
+	if ja3 == "" && ja4 == "" {
+		ja3 = "771,4865-4866-4867-49195,0-23-65281-10-11-35-16-5-51,29-23-24,0"
+	}
+	if len(headers) == 0 {
+		headers = map[string]string{"Accept": "*/*"}
+	}
+
+	return BrowserConf{
+		UserAgent: ua,
+		Ja3:       ja3,
+		Ja4:       ja4,
+		Headers:   headers,
+	}, nil
 }
