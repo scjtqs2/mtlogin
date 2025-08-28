@@ -138,6 +138,12 @@ func main() {
 	if os.Getenv("TGBOT_PROXY") != "" {
 		cfg.TgBotProxy = os.Getenv("TGBOT_PROXY")
 	}
+	if os.Getenv("FEISHU_WEBHOOKURL") != "" {
+		cfg.FeishuWebHookURL = os.Getenv("FEISHU_WEBHOOKURL")
+	}
+	if os.Getenv("FEISHU_SECRET") != "" {
+		cfg.FeishuWebHookSecret = os.Getenv("FEISHU_SECRET")
+	}
 	job, err := NewJobserver(cfg)
 	if err != nil {
 		panic(err)
